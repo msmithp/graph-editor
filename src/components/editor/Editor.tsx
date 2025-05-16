@@ -1,7 +1,12 @@
+import { useState } from "react";
 import type { Graph } from "../../types/Graph";
-import { VertexGraphic, EdgeGraphic } from ".";
+import type { Mode } from "../../types/Menu";
+import { getOnClickVertex, getOnClickEdge, 
+    getOnClickWhitespace, getOnDragVertex } from "./editorUtils";
+import { VertexGraphic, EdgeGraphic, Toolbar } from ".";
 
 
+// Placeholder data
 const vs = [];
 for (let i = 0; i < 10; i++) {
     vs.push({
@@ -15,31 +20,51 @@ const edges = [
     {source: vs[1], destination: vs[2], weight: ""}
 ];
 
-const test: Graph = {
+const graph: Graph = {
     vertices: vs,
     edges: edges
 };
 
 function Editor() {
-    const vertices = test.vertices.map((v, i) =>
+    // const [graph, setGraph] = useState<Graph>({
+    //     vertices: [],
+    //     edges: []
+    // });
+    const [mode, setMode] = useState<Mode>("select");
+
+    function updateMode(mode: Mode) {
+        setMode(mode);
+    }
+
+    const onClickVertex = getOnClickVertex(mode);
+    const onDragVertex = getOnDragVertex(mode);
+    const onClickEdge = getOnClickEdge(mode);
+    const onClickWhitespace = getOnClickWhitespace(mode);
+
+    const vertices = graph.vertices.map((v, i) =>
         <VertexGraphic key={i} vertex={v}/>
     );
 
-    const edges = test.edges.map((e, i) =>
+    const edges = graph.edges.map((e, i) =>
         <EdgeGraphic key={i} edge={e}/>
     );
 
     return (
-        <>
-            <svg width="1000" height="1000">
-                <g>
-                    {edges}
-                </g>
-                <g>
-                    {vertices}
-                </g>
-            </svg>
-        </>
+        <div className="editor">
+            <div className="editorToolbar">
+                <Toolbar onChange={updateMode} />
+            </div>
+            <div className="editorWindow">
+                <svg width="1000" height="1000">
+                    <g className="edges">
+                        {edges}
+                    </g>
+                    <g className="vertices">
+                        {vertices}
+                    </g>
+                </svg>
+            </div>
+        </div>
     )
 }
 

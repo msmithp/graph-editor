@@ -11,9 +11,11 @@ interface VertexProps {
 function VertexGraphic({ vertex }: VertexProps) {
     return (
         <g 
-        onClick={_ => console.log(name)}
+            onClick={_ => console.log(vertex.label)}
+            className="vertexGraphic"
         >
             <circle
+                className="vertexCircle"
                 cx={vertex.xpos}
                 cy={vertex.ypos}
                 r={RADIUS}
@@ -21,7 +23,8 @@ function VertexGraphic({ vertex }: VertexProps) {
                 stroke="black"
                 strokeWidth={STROKE_WIDTH}
             />
-            <text 
+            <text
+                className="vertexLabel"
                 x={vertex.xpos}
                 y={vertex.ypos} 
                 textAnchor="middle" 

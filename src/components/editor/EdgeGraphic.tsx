@@ -7,8 +7,9 @@ interface EdgeProps {
 
 function EdgeGraphic({ edge, isDirected }: EdgeProps) {
     return (
-        <g>
+        <g className="edgeGraphic">
             <path 
+                className="edgePath"
                 d={`M ${edge.source.xpos} ${edge.source.ypos} 
                     L ${edge.destination.xpos} ${edge.destination.ypos}`}
                 stroke="black"
@@ -16,7 +17,8 @@ function EdgeGraphic({ edge, isDirected }: EdgeProps) {
             >
             </path>
             { edge.weight !== "" &&
-                <text 
+                <text
+                    className="edgeWeight"
                     x={edge.source.xpos}
                     y={edge.source.ypos}
                 >
