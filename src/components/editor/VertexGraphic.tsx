@@ -1,37 +1,38 @@
+import type { Vertex } from "../../types/Graph";
+
 const RADIUS = 15;
+const STROKE_WIDTH = "0.2em";
 
 
 interface VertexProps {
-    name: string,
-    xpos: number,
-    ypos: number
+    vertex: Vertex
 }
 
-function Vertex({ name, xpos, ypos }: VertexProps) {
+function VertexGraphic({ vertex }: VertexProps) {
     return (
         <g 
         onClick={_ => console.log(name)}
         >
             <circle
-                cx={xpos}
-                cy={ypos}
+                cx={vertex.xpos}
+                cy={vertex.ypos}
                 r={RADIUS}
                 fill="white"
                 stroke="black"
-                strokeWidth="0.2em"
+                strokeWidth={STROKE_WIDTH}
             />
             <text 
-                x={xpos}
-                y={ypos} 
+                x={vertex.xpos}
+                y={vertex.ypos} 
                 textAnchor="middle" 
                 dy=".35em"
                 fontWeight="bold"
                 style={{userSelect: "none"}}
             >
-                {name}
+                {vertex.label}
             </text>
         </g>
     )
 }
 
-export default Vertex;
+export default VertexGraphic;
