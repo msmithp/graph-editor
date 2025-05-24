@@ -3,6 +3,7 @@ import type { Graph } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
 import { deleteVertexFromIndex } from "./editorUtils";
 import { VertexGraphic, EdgeGraphic, Toolbar } from ".";
+import { roundToBase, squeeze } from "../../static/utils";
 
 
 // Placeholder data
@@ -22,6 +23,12 @@ const placeholderGraph: Graph = {
     vertices: vs,
     edges: edges
 };
+// End placeholder data
+
+
+const WIDTH = 800;
+const HEIGHT = 800;
+
 
 function Editor() {
     const [graph, setGraph] = useState<Graph>(
@@ -40,21 +47,21 @@ function Editor() {
         setMode(mode);
     }
 
-    // const onClickVertex = getOnClickVertex(mode);
-    // const onDragVertex = getOnDragVertex(mode);
-    // const onClickEdge = getOnClickEdge(mode);
-    // const onClickWhitespace = getOnClickWhitespace(mode);
-
     const vertices = graph.vertices.map((v, i) => {
-        function updateLocation(x: number, y: number): void {
+        function updateLocation(x: number, y: number, gridBase?: number): void {
             console.log("Updating location of vertex " + i);
             let newVertices = graph.vertices;
-            newVertices[i].xpos = x;
-            newVertices[i].ypos = y;
+            if (gridBase != undefined) {
+                newVertices[i].xpos = roundToBase(squeeze(x, 0, WIDTH), gridBase);
+                newVertices[i].ypos = roundToBase(squeeze(y, 0, HEIGHT), gridBase);
+            } else {
+                newVertices[i].xpos = squeeze(x, 0, WIDTH), gridBase;
+                newVertices[i].ypos = squeeze(y, 0, HEIGHT), gridBase;
+            }
             setGraph({
                 vertices: newVertices,
                 edges: graph.edges
-            })
+            });
         }
 
         function deleteVertex(): void {
@@ -84,7 +91,10 @@ function Editor() {
     });
 
     const edges = graph.edges.map((e, i) =>
-        <EdgeGraphic key={i} edge={e} />
+        <EdgeGraphic
+            key={i}
+            edge={e}
+        />
     );
 
     return (
@@ -93,7 +103,7 @@ function Editor() {
                 <Toolbar onChange={updateMode} />
             </div>
             <div className="editorWindow">
-                <svg width="1000" height="1000">
+                <svg width={WIDTH} height={HEIGHT} style={{borderColor: "black", borderStyle: "solid", borderRadius: "0.7rem"}}>
                     <g className="edges">
                         {edges}
                     </g>

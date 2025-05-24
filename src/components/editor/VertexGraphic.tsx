@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, memo } from "react";
 import type { Vertex } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
 
@@ -9,7 +9,7 @@ const STROKE_WIDTH = "0.2em";
 interface VertexGraphicProps {
     vertex: Vertex,
     mode: Mode,
-    updateLocation: (x: number, y: number) => void,
+    updateLocation: (x: number, y: number, gridBase?: number) => void,
     updateLabel: (label: string) => void,
     onDelete: () => void
 }
@@ -17,75 +17,6 @@ interface VertexGraphicProps {
 function VertexGraphic(
     { vertex, mode, updateLocation, updateLabel, onDelete }: VertexGraphicProps
 ) {
-    // const [dragging, setDragging] = useState(false);
-    // const [offset, setOffset] = useState({ x: 0, y: 0 });
-    // // const [origin, setOrigin] = useState({ x: 0, y: 0});
-
-    // function handleMouseDown(event: React.MouseEvent) {
-    //     console.log("Mouse is down!");
-    //     const bbox = event.currentTarget.getBoundingClientRect();
-    //     const offsetX = event.clientX - bbox.left;
-    //     const offsetY = event.clientY - bbox.top;
-
-    //     // console.log(event.clientX + " " + event.clientY);
-    //     // setOrigin({ x: event.clientX, y: event.clientY });
-    //     setDragging(true);
-    //     setOffset({ x: offsetX, y: offsetY });
-    // }
-
-    // function handleMouseMove(event: React.MouseEvent) {
-    //     const bbox = event.currentTarget.getBoundingClientRect();
-    //     const x = event.clientX - bbox.left;
-    //     const y = event.clientY - bbox.top;
-
-    //     if (dragging) {
-    //         updateLocation(
-    //             vertex.xpos - (offset.x - x),
-    //             vertex.ypos - (offset.y - y)
-    //         )
-    //     }
-    // //     // console.log("Mouse is moving!!! " + event.clientX + " " + event.clientY);
-    // //     console.log("Mouse is moving!!!");
-
-    // //     if (dragging) {
-    // //         // console.log("origin: " + origin.x + " " + origin.y);
-    // //         // console.log("new location: " + (event.clientX - origin.x) + " " + (event.clientY - origin.y))
-    // //         // const dx = origin.x - event.clientX;
-    // //         // const dy = origin.y - event.clientY;
-
-    // //         updateLocation(
-    // //             event.clientX,
-    // //             event.clientY
-    // //         );
-    // //     }
-    // }
-
-    // function handleMouseUp(event: React.MouseEvent) {
-    //     console.log("Mouse is up.");
-    //     setDragging(false);
-    // }
-
-    // const [pos, setPos] = useState({ x: 0, y: 0 });
-    // const handleMouseMove = useRef((e: any) => {
-    //     setPos(pos => {
-    //         const dx = pos.x - e.pageX;
-    //         const dy = pos.y - e.pageY;
-    //         updateLocation(vertex.xpos - dx, vertex.ypos - dy);
-    //         return {
-    //             x: e.pageX,
-    //             y: e.pageY
-    //         }
-    //     })
-    // })
-
-    // function handleMouseDown(_: React.MouseEvent) {
-    //     document.addEventListener("mousemove", handleMouseMove.current);
-    // }
-
-    // function handleMouseUp(_: React.MouseEvent) {
-    //     document.removeEventListener("mousemove", handleMouseMove.current);
-    // }
-
     const [dragging, setDragging] = useState(false);
     const [origin, setOrigin] = useState({ x: 0, y: 0 });
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -100,10 +31,11 @@ function VertexGraphic(
         const svg = event.currentTarget.ownerSVGElement!;
 
         // Convert client coordinates to SVG coordinates
+        const invCTM = svg.getScreenCTM()!.inverse();
         const pt = svg.createSVGPoint();
         pt.x = event.clientX;
         pt.y = event.clientY;
-        const domPoint = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+        const domPoint = pt.matrixTransform(invCTM);
         return ({ x: domPoint.x, y: domPoint.y });
     }
 
@@ -132,8 +64,12 @@ function VertexGraphic(
             const dx = point.x - origin.x;
             const dy = point.y - origin.y;
 
+            // Calculate new coordinates
+            const newX = startPos.x + dx;
+            const newY = startPos.y + dy;
+
             // Update vertex location in graph
-            updateLocation(startPos.x + dx, startPos.y + dy);
+            updateLocation(newX, newY);
         }
     }
 
@@ -181,4 +117,4 @@ function VertexGraphic(
     )
 }
 
-export default VertexGraphic;
+export default memo(VertexGraphic);
