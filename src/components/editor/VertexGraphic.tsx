@@ -12,12 +12,11 @@ interface VertexGraphicProps {
     mode: Mode,
     updateLocation: (x: number, y: number) => void,
     updateLabel: (label: string) => void,
-    onClick: () => void,
-    onDelete: () => void
+    onClick: () => void
 }
 
 function VertexGraphic(
-    { vertex, mode, updateLocation, updateLabel, onClick, onDelete }: VertexGraphicProps
+    { vertex, mode, updateLocation, updateLabel, onClick }: VertexGraphicProps
 ) {
     const [dragging, setDragging] = useState(false);
     const [origin, setOrigin] = useState({ x: 0, y: 0 });

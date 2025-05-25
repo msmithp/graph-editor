@@ -70,6 +70,20 @@ function Editor() {
             setGraph(changeVertexLabel(graph, i, label));
         }
 
+        function getOnClickVertex(mode: Mode): () => void {
+            switch(mode) {
+                case "DRAW_EDGES":
+                    // return (v: Vertex) => drawEdge(v);
+                case "ERASE":
+                    return deleteVertex;
+                case "EDIT":
+
+                default:
+                    // Do nothing otherwise
+                    return () => { return }
+            }
+        }
+
         return (
             <VertexGraphic
                 key={i}
@@ -77,8 +91,7 @@ function Editor() {
                 mode={mode}
                 updateLocation={updateLocation}
                 updateLabel={updateLabel}
-                onDelete={deleteVertex}
-                onClick={() => console.log("Clicking vertex " + i)}
+                onClick={getOnClickVertex(mode)}
             />
         )
     });

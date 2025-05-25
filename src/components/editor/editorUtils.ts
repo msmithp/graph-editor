@@ -1,25 +1,16 @@
-import React from "react";
 import { roundToBase, squeeze } from "../../static/utils.ts";
 import type { Graph, Vertex } from "../../types/Graph.ts";
 import type { Mode } from "../../types/Menu.ts";
 
 
-export function getOnClickVertex(mode: Mode): (v: Vertex) => void {
-    switch(mode) {
-        case "DRAW_EDGES":
-            return (v: Vertex) => drawEdge(v);
-        case "ERASE":
-
-        case "EDIT":
-
-        default:
-            // Do nothing otherwise
-            return (_: Vertex) => { return }
-    }
-}
-
 export function createVertex(graph: Graph, x: number, y: number,
-    label?: string): Graph {
+    label?: string, gridBase?: number): Graph {
+    // Round to grid base, if necessary
+    if (gridBase !== undefined) {
+        x = roundToBase(x, gridBase);
+        y = roundToBase(y, gridBase);
+    }
+
     // Create new vertex
     const newVertex: Vertex = {
         xpos: x,
