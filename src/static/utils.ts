@@ -31,3 +31,14 @@ export function roundToBase(x: number, base: number): number {
 export function squeeze(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
 }
+
+export function getSVGPoint(svg: SVGSVGElement, x: number, y: number): 
+    {x: number, y: number} {
+    // Convert client coordinates to SVG coordinates
+    const invCTM = svg.getScreenCTM()!.inverse();
+    const pt = svg.createSVGPoint();
+    pt.x = x;
+    pt.y = y;
+    const domPoint = pt.matrixTransform(invCTM);
+    return ({ x: domPoint.x, y: domPoint.y });
+}

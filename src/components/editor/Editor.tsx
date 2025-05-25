@@ -1,9 +1,14 @@
-import { useState } from "react";
-import type { Graph } from "../../types/Graph";
+import React, { useState } from "react";
+import type { Graph, Vertex } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
-import { deleteVertexFromIndex } from "./editorUtils";
+import { 
+    deleteVertexFromIndex,
+    changeVertexLocation,
+    changeVertexLabel,
+    createVertex
+} from "./editorUtils";
 import { VertexGraphic, EdgeGraphic, Toolbar } from ".";
-import { roundToBase, squeeze } from "../../static/utils";
+import { getSVGPoint } from "../../static/utils";
 
 
 // Placeholder data
@@ -13,7 +18,7 @@ for (let i = 0; i < 10; i++) {
         label: `${i}`,
         xpos: Math.random() * 800,
         ypos: Math.random() * 800
-    })
+    });
 }
 const edges = [
     {source: vs[0], destination: vs[1], weight: ""},
@@ -38,44 +43,31 @@ function Editor() {
         // }
         placeholderGraph
     );
-    const [mode, setMode] = useState<Mode>("move");
-
-    // console.log("Updating editor...");
-    // console.log(graph);
+    const [mode, setMode] = useState<Mode>("MOVE");
+    const [fromVertex, setFromVertex] = useState<Vertex | null>(null);
 
     function updateMode(mode: Mode) {
         setMode(mode);
     }
 
+    function onClickSvg(e: React.PointerEvent<SVGSVGElement>): void {
+        console.log("Drawing new vertex");
+        const pt = getSVGPoint(e.currentTarget, e.clientX, e.clientY);
+        
+        setGraph(createVertex(graph, pt.x, pt.y, String(graph.vertices.length)));
+    }
+
     const vertices = graph.vertices.map((v, i) => {
-        function updateLocation(x: number, y: number, gridBase?: number): void {
-            console.log("Updating location of vertex " + i);
-            let newVertices = graph.vertices;
-            if (gridBase != undefined) {
-                newVertices[i].xpos = roundToBase(squeeze(x, 0, WIDTH), gridBase);
-                newVertices[i].ypos = roundToBase(squeeze(y, 0, HEIGHT), gridBase);
-            } else {
-                newVertices[i].xpos = squeeze(x, 0, WIDTH), gridBase;
-                newVertices[i].ypos = squeeze(y, 0, HEIGHT), gridBase;
-            }
-            setGraph({
-                vertices: newVertices,
-                edges: graph.edges
-            });
+        function updateLocation(x: number, y: number): void {
+            setGraph(changeVertexLocation(graph, i, x, y, WIDTH, HEIGHT));
         }
 
         function deleteVertex(): void {
-            console.log("Removing vertex " + i);
             setGraph(deleteVertexFromIndex(graph, i));
         }
 
         function updateLabel(label: string): void {
-            let newVertices = graph.vertices;
-            newVertices[i].label = label;
-            setGraph({
-                vertices: newVertices,
-                edges: graph.edges
-            })
+            setGraph(changeVertexLabel(graph, i, label));
         }
 
         return (
@@ -86,6 +78,7 @@ function Editor() {
                 updateLocation={updateLocation}
                 updateLabel={updateLabel}
                 onDelete={deleteVertex}
+                onClick={() => console.log("Clicking vertex " + i)}
             />
         )
     });
@@ -103,7 +96,11 @@ function Editor() {
                 <Toolbar onChange={updateMode} />
             </div>
             <div className="editorWindow">
-                <svg width={WIDTH} height={HEIGHT} style={{borderColor: "black", borderStyle: "solid", borderRadius: "0.7rem"}}>
+                <svg width={WIDTH} 
+                    height={HEIGHT}
+                    style={{borderColor: "black", borderStyle: "solid", borderRadius: "0.7rem"}}
+                    onPointerDown={mode === "DRAW_VERTICES" ? onClickSvg : undefined}
+                >
                     <g className="edges">
                         {edges}
                     </g>

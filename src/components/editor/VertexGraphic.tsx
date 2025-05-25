@@ -1,6 +1,7 @@
 import React, { useState, memo } from "react";
 import type { Vertex } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
+import { getSVGPoint } from "../../static/utils";
 
 
 const RADIUS = 15;
@@ -9,39 +10,23 @@ const STROKE_WIDTH = "0.2em";
 interface VertexGraphicProps {
     vertex: Vertex,
     mode: Mode,
-    updateLocation: (x: number, y: number, gridBase?: number) => void,
+    updateLocation: (x: number, y: number) => void,
     updateLabel: (label: string) => void,
+    onClick: () => void,
     onDelete: () => void
 }
 
 function VertexGraphic(
-    { vertex, mode, updateLocation, updateLabel, onDelete }: VertexGraphicProps
+    { vertex, mode, updateLocation, updateLabel, onClick, onDelete }: VertexGraphicProps
 ) {
     const [dragging, setDragging] = useState(false);
     const [origin, setOrigin] = useState({ x: 0, y: 0 });
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
 
-    interface Point {
-        x: number,
-        y: number
-    }
-
-    function getSVGPoint(event: React.PointerEvent<SVGGElement>): Point {
-        // Get SVG element
-        const svg = event.currentTarget.ownerSVGElement!;
-
-        // Convert client coordinates to SVG coordinates
-        const invCTM = svg.getScreenCTM()!.inverse();
-        const pt = svg.createSVGPoint();
-        pt.x = event.clientX;
-        pt.y = event.clientY;
-        const domPoint = pt.matrixTransform(invCTM);
-        return ({ x: domPoint.x, y: domPoint.y });
-    }
-
     function handlePointerDown(event: React.PointerEvent<SVGGElement>): void {
         // Get client x- and y-coordinates at location of click
-        const point = getSVGPoint(event);
+        const point = getSVGPoint(event.currentTarget.ownerSVGElement!, 
+            event.clientX, event.clientY);
 
         // Set origin to location of click
         setOrigin({ x: point.x, y: point.y });
@@ -58,7 +43,8 @@ function VertexGraphic(
     function handlePointerMove(event: React.PointerEvent<SVGGElement>): void {
         if (dragging) {
             // Get client x- and y-coordinates at location of pointer
-            const point = getSVGPoint(event);
+            const point = getSVGPoint(event.currentTarget.ownerSVGElement!,
+                event.clientX, event.clientY);
 
             // Calculate how far vertex has traveled from where it started
             const dx = point.x - origin.x;
@@ -84,13 +70,11 @@ function VertexGraphic(
 
     return (
         <g
-            // onClick={_ => updateLocation(vertex.xpos - 10, vertex.ypos - 10)}
-            // onClick={_ => onDelete()}
-            onClick={_ => console.log(vertex.label)}
-            onPointerDown={mode === "move" ? handlePointerDown : undefined}
-            onPointerMove={mode === "move" ? handlePointerMove : undefined}
-            onPointerUp={mode === "move" ? handlePointerUp : undefined}
-            onPointerLeave={mode === "move" ? handlePointerUp : undefined}
+            onClick={_ => onClick()}
+            onPointerDown={mode === "MOVE" ? handlePointerDown : undefined}
+            onPointerMove={mode === "MOVE" ? handlePointerMove : undefined}
+            onPointerUp={mode === "MOVE" ? handlePointerUp : undefined}
+            onPointerLeave={mode === "MOVE" ? handlePointerUp : undefined}
             className="vertexGraphic"
         >
             <circle
