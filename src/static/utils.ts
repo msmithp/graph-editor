@@ -42,3 +42,22 @@ export function getSVGPoint(svg: SVGSVGElement, x: number, y: number):
     const domPoint = pt.matrixTransform(invCTM);
     return ({ x: domPoint.x, y: domPoint.y });
 }
+
+/**
+ * Test if a string is an integer value
+ * @param s String to be tested
+ * @returns `true` if all characters in the string are numeric (i.e., `0`-`9`),
+ *          `false` otherwise
+ */
+export function isInteger(s: string): boolean {
+    for (const ch of s) {
+        const ascii = ch.charCodeAt(0);
+
+        // 48 is the ASCII value of 0 and 57 is the ASCII value of 9
+        if (ascii < 48 || ascii > 57) {
+            return false;
+        }
+    }
+
+    return true;
+}
