@@ -1,7 +1,7 @@
 import React, { useState, memo } from "react";
 import type { Vertex } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
-import { getSVGPoint } from "../../static/utils";
+import { getSVGPoint } from "../../utils/utils";
 
 
 const RADIUS = 15;
@@ -11,12 +11,11 @@ interface VertexGraphicProps {
     vertex: Vertex,
     mode: Mode,
     updateLocation: (x: number, y: number) => void,
-    updateLabel: (label: string) => void,
     onClick: () => void
 }
 
 function VertexGraphic(
-    { vertex, mode, updateLocation, updateLabel, onClick }: VertexGraphicProps
+    { vertex, mode, updateLocation, onClick }: VertexGraphicProps
 ) {
     const [dragging, setDragging] = useState(false);
     const [origin, setOrigin] = useState({ x: 0, y: 0 });
@@ -69,8 +68,12 @@ function VertexGraphic(
 
     return (
         <g
-            onClick={_ => onClick()}
-            onPointerDown={mode === "MOVE" ? handlePointerDown : undefined}
+            onPointerDown={(e) => {
+                onClick();
+                if (mode === "MOVE") {
+                    handlePointerDown(e);
+                }
+            }}
             onPointerMove={mode === "MOVE" ? handlePointerMove : undefined}
             onPointerUp={mode === "MOVE" ? handlePointerUp : undefined}
             onPointerLeave={mode === "MOVE" ? handlePointerUp : undefined}
@@ -81,7 +84,7 @@ function VertexGraphic(
                 cx={vertex.xpos}
                 cy={vertex.ypos}
                 r={RADIUS}
-                fill="white"
+                fill={vertex.color}
                 stroke="black"
                 strokeWidth={STROKE_WIDTH}
             />

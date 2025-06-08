@@ -23,13 +23,13 @@ function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
                 pointerEvents="all"
             >
             </path>
-            
+
             {/* This is the actual edge */}
             <path 
                 className="edgePath"
                 d={`M ${edge.source.xpos} ${edge.source.ypos} 
                     L ${edge.destination.xpos} ${edge.destination.ypos}`}
-                stroke="black"
+                stroke={edge.color}
                 strokeWidth="2.5"
             >
             </path>

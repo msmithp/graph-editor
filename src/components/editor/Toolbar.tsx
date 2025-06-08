@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Mode } from "../../types/Menu";
+import { MODES } from "../../types/Menu";
 
 
 interface ToolbarProps {
@@ -17,8 +18,7 @@ function Toolbar({ onChange }: ToolbarProps) {
     }
 
     // Create buttons for each possible input mode
-    const options: Mode[] = ["MOVE", "DRAW_VERTICES", "DRAW_EDGES", "ERASE", "EDIT"];
-    const radioButtons = options.map(opt =>
+    const radioButtons = MODES.map(opt =>
         <div key={opt}>
             <input type="radio" id={opt} name="mode" 
                 value={opt} checked={selected === opt}

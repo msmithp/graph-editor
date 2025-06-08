@@ -6,11 +6,13 @@ export interface Graph {
 export interface Vertex {
     label: string,
     xpos: number,
-    ypos: number
+    ypos: number,
+    color: string
 }
 
 export interface Edge {
     source: Vertex,
     destination: Vertex,
-    weight: string
+    weight: string,
+    color: string
 }

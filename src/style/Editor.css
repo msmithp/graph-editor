@@ -1,0 +1,13 @@
+.editor {
+    display: flex;
+    background-color: #EEEEEE;
+}
+
+.editorWindow {
+    display: flex;
+    flex-direction: column;
+}
+
+.editorToolbar {
+    text-align: left;
+}

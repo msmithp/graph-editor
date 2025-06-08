@@ -1,0 +1,8 @@
+.editMenu {
+    display: flex;
+    flex-direction: column;
+}
+
+.editMenuTop, .editMenuBottom {
+    display: flex;
+}

@@ -61,3 +61,15 @@ export function isInteger(s: string): boolean {
 
     return true;
 }
+
+/**
+ * If a string is longer than `n` characters, shorten it to be `n` characters
+ * long with "..." appended
+ * @param str String to be potentially truncated
+ * @param n Maximum number of characters to be displayed before the ellipsis
+ * @returns If `str` is longer than `n`, then a truncated version of `str` with
+ *          an ellipsis (`...`) added. Otherwise, just `str`.
+ */
+export function truncate(str: string, n: number): string {
+    return str.length > n ? `${str.substring(0, n)}...` : str;
+}

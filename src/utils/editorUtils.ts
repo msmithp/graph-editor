@@ -1,5 +1,5 @@
-import { isInteger, roundToBase, squeeze } from "../../static/utils.ts";
-import type { Graph, Vertex, Edge } from "../../types/Graph.ts";
+import { isInteger, roundToBase, squeeze } from "./utils.ts";
+import type { Graph, Vertex, Edge } from "../types/Graph.ts";
 
 
 /**
@@ -23,7 +23,8 @@ export function createVertex(graph: Graph, x: number, y: number,
     const newVertex: Vertex = {
         xpos: x,
         ypos: y,
-        label: label === undefined ? "" : label
+        label: label === undefined ? "" : label,
+        color: "#FFFFFF"
     };
 
     // Return new graph with vertex added
@@ -49,7 +50,8 @@ export function createEdge(graph: Graph, source: Vertex, destination: Vertex) {
     const newEdge: Edge = {
         source: source,
         destination: destination,
-        weight: ""
+        weight: "",
+        color: "#000000"
     };
 
     return {
@@ -127,9 +129,86 @@ export function deleteEdgeFromIndex(graph: Graph, idx: number): Graph {
 export function changeVertexLabel(graph: Graph, idx: number, label: string): Graph {
     const newVertices = graph.vertices;
     newVertices[idx].label = label;
+
     return {
         vertices: newVertices,
         edges: graph.edges
+    };
+}
+
+/**
+ * Given a graph, return a new graph with the color of a vertex at a given
+ * index updated
+ * @param graph Graph to be used as a base
+ * @param idx Index of vertex whose color will be updated
+ * @param color New color of vertex, as a hex code in the format `"#FFFFFF"`
+ * @returns New graph with updated vertex color
+ */
+export function changeVertexColor(graph: Graph, idx: number, color: string): Graph {
+    const newVertices = graph.vertices;
+    newVertices[idx].color = color;
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+export function changeVertexLabelAndColor(graph: Graph, idx: number, label: string, color: string): Graph {
+    const newVertices = graph.vertices;
+    newVertices[idx].label = label;
+    newVertices[idx].color = color;
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+/**
+ * Given a graph, return a new graph with the weight of an edge at a given
+ * index updated
+ * @param graph Graph to be used as a base
+ * @param idx Index of edge whose weight will be updated
+ * @param weight New weight of edge
+ * @returns New graph with updated edge weight
+ */
+export function changeEdgeWeight(graph: Graph, idx: number, weight: string): Graph {
+    const newEdges = graph.edges;
+    newEdges[idx].weight = weight;
+
+    return {
+        vertices: graph.vertices,
+        edges: newEdges
+    };
+}
+
+/**
+ * Given a graph, return a new graph with the color of an edge at a given
+ * index updated
+ * @param graph Graph to be used as a base
+ * @param idx Index of edge whose color will be updated
+ * @param color New color of edge, as a hex code in the format `"#FFFFFF"`
+ * @returns New graph with updated edge color
+ */
+export function changeEdgeColor(graph: Graph, idx: number, color: string): Graph {
+    const newEdges = graph.edges;
+    newEdges[idx].color = color;
+
+    return {
+        vertices: graph.vertices,
+        edges: newEdges
+    };
+}
+
+export function changeEdgeWeightAndColor(graph: Graph, idx: number, weight: string, color: string): Graph {
+    const newEdges = graph.edges;
+    newEdges[idx].weight = weight;
+    newEdges[idx].color = color;
+
+    return {
+        vertices: graph.vertices,
+        edges: newEdges
     };
 }
 
