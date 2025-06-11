@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import type { Edge, Graph, Vertex } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
 import { 
-    deleteVertexFromIndex, changeVertexLocation, createVertex, 
-    getSmallestLabel, deleteEdgeFromIndex, createEdge,
-    changeEdgeWeightAndColor, changeVertexLabelAndColor
+    deleteVertexFromIndex, changeVertexLocation, createVertex,
+    getSmallestLabel, deleteEdgeFromIndex, createEdge, changeVertexLabel,
+    changeVertexColor, changeEdgeColor, changeEdgeWeight
 } from "../../utils/editorUtils";
 import {
     VertexGraphic, EdgeGraphic, Toolbar, EditVertexMenu, 
@@ -65,16 +65,43 @@ function Editor() {
         setMode(mode);
     }
 
+    function selectVertex(vertex: Vertex, index: number) {
+        setSelectedVertex({
+            vertex: vertex,
+            index: index
+        });
+        setSelectedEdge(null);
+    }
+
+    function selectEdge(edge: Edge, index: number) {
+        setSelectedEdge({
+            edge: edge,
+            index: index
+        });
+        setSelectedVertex(null);
+    }
+
     function onClickSvg(e: React.PointerEvent<SVGSVGElement>): void {
-        console.log("Clicking SVG");
         // Convert SVG coordinates to client coordinates
         const pt = getSVGPoint(e.currentTarget, e.clientX, e.clientY);
         
-        // Default name of new vertex is the lowest non-negative integer not
-        // already used as a vertex label
+        // Create a new vertex. Default name of new vertex is the lowest 
+        // non-negative integer not already used as a vertex label.
+        const label = String(getSmallestLabel(graph));
+        const color = "#FFFFFF";
         setGraph(
-            createVertex(graph, pt.x, pt.y, String(getSmallestLabel(graph)))
+            createVertex(graph, pt.x, pt.y, label, color)
         );
+
+        // Set selected vertex to newly created vertex
+        const newVertex: Vertex = {
+            label: label,
+            xpos: pt.x,
+            ypos: pt.y,
+            color: color
+        };
+
+        selectVertex(newVertex, graph.vertices.length + 1);
     }
 
     function onMouseMoveSvg(e: React.MouseEvent<SVGSVGElement>): void {
@@ -105,7 +132,7 @@ function Editor() {
         function getOnClickVertex(mode: Mode): () => void {
             switch(mode) {
                 case "MOVE":
-                    return () => setSelectedVertex({ vertex: v, index: i });
+                    return () => selectVertex(v, i);
                 case "DRAW_EDGES":
                     if (fromVertex === null) {
                         // Start drawing a new edge from this vertex
@@ -148,7 +175,7 @@ function Editor() {
         function getOnClickEdge(mode: Mode): () => void {
             switch(mode) {
                 case "MOVE":
-                    return () => setSelectedEdge({ edge: e, index: i });
+                    return () => selectEdge(e, i);
                 case "ERASE":
                     // Delete this edge
                     return () => setGraph(deleteEdgeFromIndex(graph, i));
@@ -167,24 +194,29 @@ function Editor() {
         );
     });
 
-    // console.log(`Rerendering, current vertex is ${selectedVertex === null ? "null" : selectedVertex.vertex.label}`);
-    let editorWindowInfo;
+    let selectedElementEditor;
     if (selectedVertex !== null) {
-        editorWindowInfo = <EditVertexMenu
+        selectedElementEditor = <EditVertexMenu
             vertex={selectedVertex.vertex}
-            onSubmit={(label, color) => setGraph(
-                changeVertexLabelAndColor(
-                    graph, selectedVertex.index, label, color
-                )
+            onChangeColor={color => setGraph(
+                changeVertexColor(graph, selectedVertex.index, color)
+            )}
+            onChangeLabel={label => setGraph(
+                changeVertexLabel(graph, selectedVertex.index, label)
             )}
         />;
     } else if (selectedEdge !== null) {
-        editorWindowInfo = <EditEdgeMenu
+        selectedElementEditor = <EditEdgeMenu
             edge={selectedEdge.edge} 
-            onSubmit={(weight, color) => { return }}
+            onChangeColor={color => setGraph(
+                changeEdgeColor(graph, selectedEdge.index, color)
+            )}
+            onChangeWeight={weight => setGraph(
+                changeEdgeWeight(graph, selectedEdge.index, weight)
+            )}
         />;
     } else {
-        editorWindowInfo = <p>No element selected</p>;
+        selectedElementEditor = <p>No element selected</p>;
     }
 
     return (
@@ -197,7 +229,8 @@ function Editor() {
             {/* Main editor window */}
             <div className="editorWindow">
                 <div className="editorWindowInfo">
-                    {editorWindowInfo}
+                    {/* Edit selected vertex/edge */}
+                    {selectedElementEditor}
                 </div>
                 <div className="editorWindowGraph">
                     <svg
@@ -237,6 +270,7 @@ function Editor() {
 
                                 // Hide vertex/edge edit menus
                                 setSelectedVertex(null);
+                                setSelectedEdge(null);
                             }}
                         />
 

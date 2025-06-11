@@ -8,11 +8,12 @@ import type { Graph, Vertex, Edge } from "../types/Graph.ts";
  * @param x `x`-coordinate of new vertex
  * @param y `y`-coordinate of new vertex
  * @param label Label of new vertex
+ * @param color Color of new vertex
  * @param gridBase Grid base, if any, to round coordinates to
  * @returns New graph with vertex added
  */
 export function createVertex(graph: Graph, x: number, y: number,
-    label?: string, gridBase?: number): Graph {
+    label?: string, color?: string, gridBase?: number): Graph {
     // Round to grid base, if necessary
     if (gridBase !== undefined) {
         x = roundToBase(x, gridBase);
@@ -24,7 +25,7 @@ export function createVertex(graph: Graph, x: number, y: number,
         xpos: x,
         ypos: y,
         label: label === undefined ? "" : label,
-        color: "#FFFFFF"
+        color: color === undefined ? "#FFFFFF" : color
     };
 
     // Return new graph with vertex added
@@ -39,9 +40,12 @@ export function createVertex(graph: Graph, x: number, y: number,
  * @param graph Graph to be used as a base
  * @param source Source vertex
  * @param destination Destination vertex
+ * @param weight Weight of edge
+ * @param color Color of edge
  * @returns New graph with edge added
  */
-export function createEdge(graph: Graph, source: Vertex, destination: Vertex) {
+export function createEdge(graph: Graph, source: Vertex, destination: Vertex,
+    weight?: string, color?: string) {
     if (source == destination) {
         // Prevent loops
         return graph;
@@ -50,8 +54,8 @@ export function createEdge(graph: Graph, source: Vertex, destination: Vertex) {
     const newEdge: Edge = {
         source: source,
         destination: destination,
-        weight: "",
-        color: "#000000"
+        weight: weight === undefined ? "" : weight,
+        color: color === undefined ? "#000000" : color
     };
 
     return {

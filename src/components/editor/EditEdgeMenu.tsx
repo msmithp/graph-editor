@@ -1,21 +1,31 @@
 import "../../style/EditMenu.css";
-import { useState } from "react";
 import type { Edge } from "../../types/Graph";
 
 
 interface EditEdgeMenuProps {
     edge: Edge,
-    onSubmit: (weight: string, color: string) => void
+    onChangeWeight: (weight: string) => void,
+    onChangeColor: (color: string) => void
 }
 
-function EditEdgeMenu({ edge, onSubmit }: EditEdgeMenuProps) {
-    const [weight, setWeight] = useState<string>(edge.weight);
-    const [color, setColor] = useState<string>(edge.color);
-
+function EditEdgeMenu({ edge, onChangeWeight,
+    onChangeColor }: EditEdgeMenuProps) {
     return (
         <div className="editMenu">
-            <input type="color" />
-            <input />
+            <input type="color" 
+                value={edge.color}
+                onChange={(e) => {
+                    const newColor = e.currentTarget.value;
+                    onChangeColor(newColor);
+                }}
+            />
+            <input 
+                value={edge.weight}
+                onChange={(e) => {
+                    const newWeight = e.currentTarget.value;
+                    onChangeWeight(newWeight);
+                }}
+            />
         </div>
     );
 }
