@@ -22,7 +22,7 @@ function Toolbar({ onChange }: ToolbarProps) {
         <div key={opt}>
             <input type="radio" id={opt} name="mode" 
                 value={opt} checked={selected === opt}
-                onChange={_ => updateSelection(opt)}
+                onChange={() => updateSelection(opt)}
             />
             <label htmlFor={opt}>{opt}</label>
         </div>
