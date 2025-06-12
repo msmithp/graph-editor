@@ -4,17 +4,19 @@ import { MODES } from "../../types/Menu";
 
 
 interface ToolbarProps {
-    onChange: (mode: Mode) => void
+    vertexColor: string,
+    onChangeMode: (mode: Mode) => void,
+    onChangeColor: (color: string) => void
 }
 
 
-function Toolbar({ onChange }: ToolbarProps) {
+function Toolbar({ vertexColor, onChangeMode, onChangeColor }: ToolbarProps) {
     // State variables
-    const [selected, setSelected] = useState<Mode>("MOVE")
+    const [selected, setSelected] = useState<Mode>("MOVE");
 
     function updateSelection(selection: Mode) {
         setSelected(selection);
-        onChange(selection);
+        onChangeMode(selection);
     }
 
     // Create buttons for each possible input mode
@@ -30,7 +32,15 @@ function Toolbar({ onChange }: ToolbarProps) {
 
     return (
         <div className="toolbar">
-            {radioButtons}
+            <div className="toolbarOptions">
+                {radioButtons}
+            </div>
+            <div className="toolbarColors" style={{display: "flex", flexDirection: "column"}}>
+                <input type="color"
+                    value={vertexColor}
+                    onChange={e => onChangeColor(e.currentTarget.value)}
+                />
+            </div>
         </div>
     )
 }

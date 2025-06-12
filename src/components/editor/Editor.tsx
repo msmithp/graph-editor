@@ -52,7 +52,7 @@ function Editor() {
     const [fromVertex, setFromVertex] = useState<Vertex | null>(null);
     const [selectedVertex, setSelectedVertex] = useState<number | null>(null);
     const [selectedEdge, setSelectedEdge] = useState<number | null>(null);
-    const [currentColor, setCurrentColor] = useState<string>("#FFFFFF");
+    const [selectedColor, setSelectedColor] = useState<string>("#000000");
 
     function updateMode(mode: Mode) {
         // When changing modes, set any active drawing/edit to null
@@ -62,16 +62,29 @@ function Editor() {
         setMode(mode);
     }
 
+    /**
+     * Set the vertex at a given index as selected, enabling editing
+     * @param index Index of vertex in the list of vertices to be selected
+     */
     function selectVertex(index: number): void {
+        // Update selections
         setSelectedVertex(index);
         setSelectedEdge(null);
     }
 
+    /**
+     * Set the edge at a given index as selected, enabling editing
+     * @param index Index of edge in the list of edges to be selected
+     */
     function selectEdge(index: number): void {
         setSelectedEdge(index);
         setSelectedVertex(null);
     }
 
+    /**
+     * Erase the vertex at a given index
+     * @param index Index of the vertex in the list of vertices to be deleted
+     */
     function eraseVertex(index: number): void {
         const currentVertex = graph.vertices[index];
 
@@ -101,6 +114,10 @@ function Editor() {
         setGraph(deleteVertexFromIndex(graph, index));
     }
 
+    /**
+     * Erase the edge at a given index
+     * @param index Index of the edge in the list of edges to be deleted
+     */
     function eraseEdge(index: number): void {
         if (selectedEdge !== null) {
             // If edge being erased is currently selected, deselect it before
@@ -118,6 +135,10 @@ function Editor() {
         setGraph(deleteEdgeFromIndex(graph, index));
     }
 
+    /**
+     * Draw a new vertex at the clicked point of an SVG element
+     * @param e Pointer event from clicking an SVG element
+     */
     function onClickSvg(e: React.PointerEvent<SVGSVGElement>): void {
         // Convert SVG coordinates to client coordinates
         const pt = getSVGPoint(e.currentTarget, e.clientX, e.clientY);
@@ -125,13 +146,16 @@ function Editor() {
         // Create a new vertex. Default name of new vertex is the lowest 
         // non-negative integer not already used as a vertex label.
         const label = String(getSmallestLabel(graph));
-        const color = "#FFFFFF";
-        setGraph(createVertex(graph, pt.x, pt.y, label, color));
+        setGraph(createVertex(graph, pt.x, pt.y, label));
 
         // Set selected vertex to newly created vertex
         selectVertex(graph.vertices.length);
     }
 
+    /**
+     * Update the current position of the mouse within an SVG element
+     * @param e Mouse event from moving the mouse in an SVG element
+     */
     function onMouseMoveSvg(e: React.MouseEvent<SVGSVGElement>): void {
         const pt = getSVGPoint(e.currentTarget, e.clientX, e.clientY);
         setMousePos({
@@ -170,11 +194,20 @@ function Editor() {
                         return () => {
                             setGraph(createEdge(graph, fromVertex, v));
                             setFromVertex(null);
+                            selectEdge(graph.edges.length);
                         };
                     }
                 case "ERASE":
                     // Delete this vertex
                     return () => eraseVertex(i);
+                case "PAINT":
+                    // Set the color of this vertex to the selected color
+                    return () => setGraph(
+                        changeVertexColor(graph, i, selectedColor)
+                    );
+                case "EYEDROP":
+                    // Set selected color to color of this vertex
+                    return () => setSelectedColor(v.color);
                 default:
                     // Do nothing otherwise
                     return () => { return };
@@ -207,6 +240,14 @@ function Editor() {
                 case "ERASE":
                     // Delete this edge
                     return () => eraseEdge(i);
+                case "PAINT":
+                    // Set the color of this edge to the selected color
+                    return () => setGraph(
+                        changeEdgeColor(graph, i, selectedColor)
+                    );
+                case "EYEDROP":
+                    // Set selected color to color of this edge
+                    return () => setSelectedColor(e.color);
                 default:
                     // Do nothing otherwise
                     return () => { return };
@@ -252,7 +293,11 @@ function Editor() {
         <div className="editor">
             {/* Toolbar */}
             <div className="editorToolbar">
-                <Toolbar onChange={updateMode} />
+                <Toolbar
+                    vertexColor={selectedColor}
+                    onChangeMode={updateMode}
+                    onChangeColor={color => setSelectedColor(color)}
+                />
             </div>
 
             {/* Main editor window */}
@@ -280,7 +325,7 @@ function Editor() {
                                 className="edgePath"
                                 d={`M ${fromVertex.xpos} ${fromVertex.ypos} 
                                     L ${mousePos.x} ${mousePos.y}`}
-                                stroke="black"
+                                stroke="#000000"
                                 strokeWidth="2.5" 
                             />
                         }
