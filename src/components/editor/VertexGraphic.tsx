@@ -2,9 +2,9 @@ import React, { useState, memo } from "react";
 import type { Vertex } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
 import { getSVGPoint } from "../../utils/utils";
+import { VERTEX_RADIUS } from "../../utils/constants";
 
 
-const RADIUS = 15;
 const STROKE_WIDTH = "0.2em";
 
 interface VertexGraphicProps {
@@ -83,7 +83,7 @@ function VertexGraphic(
                 className="vertexCircle"
                 cx={vertex.xpos}
                 cy={vertex.ypos}
-                r={RADIUS}
+                r={VERTEX_RADIUS}
                 fill={vertex.color}
                 stroke="black"
                 strokeWidth={STROKE_WIDTH}

@@ -53,6 +53,9 @@ function Editor() {
     const [selectedVertex, setSelectedVertex] = useState<number | null>(null);
     const [selectedEdge, setSelectedEdge] = useState<number | null>(null);
     const [selectedColor, setSelectedColor] = useState<string>("#000000");
+    const [gridBase, setGridBase] = useState<number | null>(null);
+    const [isDirected, setIsDirected] = useState<boolean>(false);
+    
 
     function updateMode(mode: Mode) {
         // When changing modes, set any active drawing/edit to null
@@ -146,7 +149,12 @@ function Editor() {
         // Create a new vertex. Default name of new vertex is the lowest 
         // non-negative integer not already used as a vertex label.
         const label = String(getSmallestLabel(graph));
-        setGraph(createVertex(graph, pt.x, pt.y, label));
+        const color = "#FFFFFF";
+        if (gridBase !== null) {
+            setGraph(createVertex(graph, pt.x, pt.y, label, color, gridBase));
+        } else {
+            setGraph(createVertex(graph, pt.x, pt.y, label, color));
+        }
 
         // Set selected vertex to newly created vertex
         selectVertex(graph.vertices.length);
@@ -171,7 +179,12 @@ function Editor() {
          * @param y New `y`-coordinate of vertex
          */
         function updateLocation(x: number, y: number): void {
-            setGraph(changeVertexLocation(graph, i, x, y, WIDTH, HEIGHT));
+            if (gridBase !== null) {
+                setGraph(changeVertexLocation(graph, i, x, y, 
+                    WIDTH, HEIGHT, gridBase));
+            } else {
+                setGraph(changeVertexLocation(graph, i, x, y, WIDTH, HEIGHT));
+            }
         }
 
         /**
@@ -258,6 +271,7 @@ function Editor() {
             <EdgeGraphic
                 key={i}
                 edge={e}
+                isDirected={isDirected}
                 onClick={getOnClickEdge(mode)}
             />
         );

@@ -1,4 +1,5 @@
 import type { Edge } from "../../types/Graph";
+import { getDirectedEdgeArrowPoints, getEdgeMidpoint } from "../../utils/graphUtils";
 
 interface EdgeProps {
     edge: Edge
@@ -7,6 +8,9 @@ interface EdgeProps {
 }
 
 function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
+    const midpoint = getEdgeMidpoint(edge);
+    const arrowPoints = getDirectedEdgeArrowPoints(edge);
+
     return (
         <g 
             className="edgeGraphic"
@@ -33,11 +37,28 @@ function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
                 strokeWidth="2.5"
             >
             </path>
+
+            {/* Draw arrow head if edge is directed */}
+            { isDirected &&
+                <polygon
+                    className="edgePath"
+                    points={
+                        `${arrowPoints.left.x},${arrowPoints.left.y}
+                            ${arrowPoints.right.x},${arrowPoints.right.y},
+                            ${arrowPoints.middle.x}, ${arrowPoints.middle.y}`
+                    }
+                    fill={edge.color}
+                >
+                </polygon>
+            }
+
+            {/* Display edge weight, if any */}
             { edge.weight !== "" &&
                 <text
                     className="edgeWeight"
-                    x={edge.source.xpos}
-                    y={edge.source.ypos}
+                    x={midpoint.x}
+                    y={midpoint.y}
+                    style={{ userSelect: "none" }}
                 >
                     {edge.weight}
                 </text>
