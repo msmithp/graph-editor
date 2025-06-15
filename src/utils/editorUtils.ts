@@ -296,3 +296,24 @@ export function getSmallestLabel(graph: Graph): number {
     // `names` array, and thus n is the smallest possible label
     return n;
 }
+
+/**
+ * Given a graph, return a new graph with the locations of each vertex rounded
+ * to a multiple of a given base
+ * @param graph Graph to be used as a base
+ * @param base Integer base, which each vertex's `x`- and `y`-coordinates will
+ *             be a multiple of
+ * @returns New graph with rounded vertex locations
+ */
+export function snapVerticesToGrid(graph: Graph, base: number): Graph {
+    // Create deep copy of graph
+    const newGraph = structuredClone(graph);
+
+    // Mutate new graph by rounding the coordinates of each vertex to base
+    for (const v of newGraph.vertices) {
+        v.xpos = roundToBase(v.xpos, base);
+        v.ypos = roundToBase(v.ypos, base);
+    }
+
+    return newGraph;
+}

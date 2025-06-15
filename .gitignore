@@ -1,3 +1,6 @@
+# Unused code
+.unused
+
 # Logs
 logs
 *.log

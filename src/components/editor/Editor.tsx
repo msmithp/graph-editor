@@ -4,13 +4,16 @@ import type { Mode } from "../../types/Menu";
 import { 
     deleteVertexFromIndex, changeVertexLocation, createVertex,
     getSmallestLabel, deleteEdgeFromIndex, createEdge, changeVertexLabel,
-    changeVertexColor, changeEdgeColor, changeEdgeWeight
+    changeVertexColor, changeEdgeColor, changeEdgeWeight,
+    snapVerticesToGrid
 } from "../../utils/editorUtils";
 import {
-    VertexGraphic, EdgeGraphic, Toolbar, EditVertexMenu, EditEdgeMenu
+    VertexGraphic, EdgeGraphic, Toolbar, EditVertexMenu, EditEdgeMenu,
+    Grid
 } from ".";
 import { getSVGPoint } from "../../utils/utils";
 import "../../style/Editor.css";
+import { SettingsMenu } from "./menus";
 
 
 // Placeholder data
@@ -54,6 +57,7 @@ function Editor() {
     const [selectedEdge, setSelectedEdge] = useState<number | null>(null);
     const [selectedColor, setSelectedColor] = useState<string>("#000000");
     const [gridBase, setGridBase] = useState<number | null>(null);
+    const [isGridShown, setIsGridShown] = useState<boolean>(false);
     const [isDirected, setIsDirected] = useState<boolean>(false);
     
 
@@ -332,6 +336,15 @@ function Editor() {
                         onMouseMove={mode === "DRAW_EDGES" ?
                             onMouseMoveSvg : undefined}
                     >
+                        {/* Display grid in background */}
+                        { gridBase && isGridShown &&
+                            <Grid
+                                width={WIDTH}
+                                height={HEIGHT}
+                                base={gridBase}
+                            />
+                        }
+
                         {/* Display a prospective edge at the location of the
                             cursor if a fromVertex has been selected */}
                         { fromVertex &&
@@ -356,9 +369,14 @@ function Editor() {
                                 // Cancel edge being drawn
                                 setFromVertex(null);
 
-                                // Hide vertex/edge edit menus
-                                setSelectedVertex(null);
-                                setSelectedEdge(null);
+                                // Hide vertex/edge edit menus. We disable this
+                                // function when the mode is DRAW_VERTICES so
+                                // that when the grid is on, we don't
+                                // instantly deselect newly created vertices
+                                if (mode !== "DRAW_VERTICES") {
+                                    setSelectedVertex(null);
+                                    setSelectedEdge(null);
+                                }
                             }}
                         />
 
@@ -371,6 +389,36 @@ function Editor() {
                         </g>
                     </svg>
                 </div>
+            </div>
+
+            {/* Accordion menu sidebar */}
+            <div className="accordion" style={{textAlign: "left"}}>
+                <details>
+                    <summary>Settings</summary>
+                    <SettingsMenu
+                        onUpdateDirected={isDirected => 
+                            setIsDirected(isDirected)}
+                        onUpdateGridBase={base => {
+                            setGridBase(base);
+                            if (base !== null) {
+                                setGraph(snapVerticesToGrid(graph, base));
+                            }
+                        }}
+                        onShowGrid={isShown => setIsGridShown(isShown)}
+                    />
+                </details>
+                <details>
+                    <summary>Graph Information</summary>
+                </details>
+                <details>
+                    <summary>Operations</summary>
+                </details>
+                <details>
+                    <summary>Generators</summary>
+                </details>
+                <details>
+                    <summary>Import/Export</summary>
+                </details>
             </div>
         </div>
     );

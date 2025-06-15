@@ -45,7 +45,7 @@ export function getDirectedEdgeArrowPoints(e: Edge): ArrowPoints {
             left: default_coords,
             right: default_coords,
             middle: default_coords
-        }
+        };
     }
 
     // Distance from top of arrow head to bottom of arrow head
@@ -72,7 +72,7 @@ export function getDirectedEdgeArrowPoints(e: Edge): ArrowPoints {
                 y: arrowBasePoint.y - ARROW_BASE_LENGTH/2
             },
             middle: arrowTipPoint
-        }
+        };
     }
 
     // Get negative inverse of slope as a vector
