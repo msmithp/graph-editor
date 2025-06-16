@@ -14,7 +14,7 @@ function SettingsMenu({ onUpdateDirected,
     const [gridBase, setGridBase] = useState<string>("");
 
     return (
-        <div>
+        <div className="menuTab">
             <div>
                 <input
                     type="checkbox"

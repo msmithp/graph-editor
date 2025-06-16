@@ -13,7 +13,8 @@ import {
 } from ".";
 import { getSVGPoint } from "../../utils/utils";
 import "../../style/Editor.css";
-import { SettingsMenu } from "./menus";
+import { GeneratorsMenu, ImportExportMenu, InformationMenu, OperationsMenu, SettingsMenu } from "./menus";
+import { complement, lineGraph } from "../../utils/graphUtils";
 
 
 // Placeholder data
@@ -409,15 +410,30 @@ function Editor() {
                 </details>
                 <details>
                     <summary>Graph Information</summary>
+                    <InformationMenu />
                 </details>
                 <details>
                     <summary>Operations</summary>
+                    <OperationsMenu
+                        onLineGraph={() => {
+                            setSelectedVertex(null);
+                            setSelectedEdge(null);
+                            setGraph(lineGraph(graph));
+                        }}
+                        onComplement={() => {
+                            setSelectedVertex(null);
+                            setSelectedEdge(null);
+                            setGraph(complement(graph));
+                        }}
+                    />
                 </details>
                 <details>
                     <summary>Generators</summary>
+                    <GeneratorsMenu />
                 </details>
                 <details>
                     <summary>Import/Export</summary>
+                    <ImportExportMenu />
                 </details>
             </div>
         </div>
