@@ -1,292 +1,483 @@
-import type { Edge, Graph } from "../types/Graph";
-import { VERTEX_RADIUS } from "./constants";
+import { isInteger, roundToBase, squeeze } from "./utils.ts";
+import type { Graph, Vertex, Edge } from "../types/Graph.ts";
+import TupleMap from "../classes/TupleMap.ts";
+
 
 /**
- * Get the midpoint between the source and destination vertices of an edge
- * @param e Edge whose midpoint will be returned
- * @returns Midpoint of edge as x and y coordinates
+ * Given a graph, return a new graph with a new vertex added
+ * @param graph Graph to be used as a base
+ * @param x `x`-coordinate of new vertex
+ * @param y `y`-coordinate of new vertex
+ * @param label Label of new vertex
+ * @param color Color of new vertex
+ * @param gridBase Grid base, if any, to round coordinates to
+ * @returns New graph with vertex added
  */
-export function getEdgeMidpoint(e: Edge): {x: number, y: number} {
-    return {
-        x: (e.source.xpos + e.destination.xpos) / 2,
-        y: (e.source.ypos + e.destination.ypos) / 2
+export function createVertex(graph: Graph, x: number, y: number,
+    label?: string, color?: string, gridBase?: number): Graph {
+    // Round to grid base, if necessary
+    if (gridBase !== undefined) {
+        x = roundToBase(x, gridBase);
+        y = roundToBase(y, gridBase);
+    }
+
+    // Create new vertex
+    const newVertex: Vertex = {
+        xpos: x,
+        ypos: y,
+        label: label === undefined ? "" : label,
+        color: color === undefined ? "#FFFFFF" : color
     };
-}
 
-interface ArrowPoints {
-    left: {
-        x: number,
-        y: number
-    },
-    right: {
-        x: number,
-        y: number
-    }
-    middle: {
-        x: number,
-        y: number
-    }
-}
-
-/**
- * Calculate the coordinates necessary to draw a triangle at the end of an edge
- * to represent the arrow head of a directed edge
- * @param e Directed edge
- * @returns x- and y-coordinates of the middle (arrow tip), left (left end of
- * base), and right (right end of base) points of a triangle to draw on a
- * directed graph edge
- */
-export function getDirectedEdgeArrowPoints(e: Edge): ArrowPoints {
-    if (e.source.xpos === e.destination.xpos 
-        && e.source.ypos === e.destination.ypos) {
-        // Return coordinates of source vertex to avoid division by 0
-        const default_coords = { x: e.source.xpos, y: e.source.ypos };
-        return {
-            left: default_coords,
-            right: default_coords,
-            middle: default_coords
-        };
-    }
-
-    // Distance from top of arrow head to bottom of arrow head
-    const ARROW_HEIGHT = 15;
-
-    // Distance from left side of arrow head to right side of arrow head
-    const ARROW_BASE_LENGTH = 15;
-
-    // Get tip and base points of arrow head
-    const arrowTipPoint = getDirectedEdgeArrowTipPoint(e);
-    const arrowBasePoint = getPointOnLine(arrowTipPoint.x, arrowTipPoint.y,
-        e.source.xpos, e.source.ypos, ARROW_HEIGHT);
-
-    if (e.source.ypos === e.destination.ypos) {
-        // To avoid division by 0, if the two vertices are at the same
-        // y-position, return early
-        return {
-            left: {
-                x: arrowBasePoint.x,
-                y: arrowBasePoint.y + ARROW_BASE_LENGTH/2
-            },
-            right: {
-                x: arrowBasePoint.x,
-                y: arrowBasePoint.y - ARROW_BASE_LENGTH/2
-            },
-            middle: arrowTipPoint
-        };
-    }
-
-    // Get negative inverse of slope as a vector
-    const rise = e.destination.ypos - e.source.ypos;
-    const run = e.destination.xpos - e.source.xpos;
-    const invSlopeVector = [rise, -run];
-
-    // Normalize negative inverse of slope to get unit vector
-    const unitVector = vectorDivide(
-        invSlopeVector, 
-        vectorNorm(invSlopeVector)
-    );
-
-    // Get left point of arrow head by adding the unit vector to the arrow base
-    // point vector, multiplied by a constant
-    const left = vectorAdd(
-        [arrowBasePoint.x, arrowBasePoint.y],
-        vectorMultiply(unitVector, ARROW_BASE_LENGTH/2)
-    );
-
-    // Get right point of arrow head by subtracting the unit vector from the
-    // arrow base point vector, multiplied by a constant
-    const right = vectorAdd(
-        [arrowBasePoint.x, arrowBasePoint.y],
-        vectorMultiply(unitVector, -ARROW_BASE_LENGTH/2)
-    );
-
+    // Return new graph with vertex added
     return {
-        left: {
-            x: left[0],
-            y: left[1]
-        },
-        right: {
-            x: right[0],
-            y: right[1]
-        },
-        middle: arrowTipPoint
+        vertices: [...graph.vertices, newVertex],
+        edges: [...graph.edges, new Map()]
     };
 }
 
 /**
- * Get the middle point of a directed edge, which will be used to draw an
- * arrow point to the destination vertex. The middle point is where the arrow
- * head will be drawn. The location of the middle point is based on the radius
- * of the vertex graphics.
- * @param e Directed edge
- * @returns x- and y-coordinates of the middle point at which an arrow head
- *          will be drawn
+ * Given a graph, return a new graph with a new edge added
+ * @param graph Graph to be used as a base
+ * @param source Index of source vertex
+ * @param destination Index of destination vertex
+ * @param weight Weight of edge
+ * @param color Color of edge
+ * @returns New graph with edge added
  */
-function getDirectedEdgeArrowTipPoint(e: Edge): { x: number, y: number } {
-    // Note that we consider the destination to be the first point and the
-    // source to be the second point so that we are basing the distance
-    // traveled on the position of the destination vertex, which is where the
-    // arrow will be drawn
-    return getPointOnLine(e.destination.xpos, e.destination.ypos,
-        e.source.xpos, e.source.ypos, VERTEX_RADIUS);
-}
+export function createEdge(graph: Graph, source: number, destination: number,
+    weight?: string, color?: string): Graph {
+    if (source === destination) {
+        // Prevent loops... for now
+        return graph;
+    }
 
-/**
- * Calculate the coordinates of a point that is on the line between two other
- * points, some distance away from the first point
- * @param x1 x-coordinate of first point
- * @param y1 y-coordinate of first point
- * @param x2 x-coordinate of second point
- * @param y2 y-coordinate of second point
- * @param distance Distance from the first point that the returned point will
- *                 be
- * @returns x- and y-coordinates of the point that is `distance` units away
- *          from the first point
- */
-function getPointOnLine(x1: number, y1: number, 
-    x2: number, y2: number, distance: number) {
-    // Throughout this function, we think of the coordinates of the source and
-    // destination points as 2D vectors. First, we get the norm of the vector
-    // that results from subtracting the destination vector from the source
-    // vector.
-    const norm = vectorNorm([
-        x2 - x1,
-        y2 - y1
-    ]);
+    const newEdge: Edge = {
+        weight: weight === undefined ? "" : weight,
+        color: color === undefined ? "#000000" : color
+    };
 
-    // Next, we divide the difference vector by the norm to normalize it.
-    const unitVector = vectorDivide([
-        x2 - x1,
-        y2 - y1
-    ], norm);
+    // Get list of all edges from `source` to `destination`
+    const edgeList = graph.edges[source].get(destination);
 
-    // Next, we find the vector which represents the point between the source
-    // and destination.
-    // This is calculated as v_{destination} + (d * u), where:
-    //      * v_{destination} is the vector representing the coordinates of the
-    //        destination point
-    //      * d is the distance we want to move away from the destination point
-    //      * u is the unit vector
-    const middleVector = vectorAdd(
-        [x1, y1],
-        vectorMultiply(unitVector, distance)
-    );
+    const newEdges = structuredClone(graph.edges);
+    if (edgeList === undefined) {
+        // No edges currently exist from `source` to `destination`, so make a
+        // new list
+        newEdges[source].set(destination, [newEdge]);
+    } else {
+        // Some edges already exist from `source` to `destination`, so add the
+        // new edge to them
+        newEdges[source].set(destination, [...edgeList, newEdge])
+    }
 
-    // Return the first and second values of the middle vector, which represent
-    // x- and y-coordinates
     return {
-        x: middleVector[0],
-        y: middleVector[1]
+        vertices: graph.vertices,
+        edges: newEdges
     };
 }
 
 /**
- * Add two vectors of the same length, element-by-element
- * @param v1 First vector
- * @param v2 Second vector
- * @returns Sum vector
+ * Given a graph, return a new graph with a given vertex removed. If `v` is not
+ * in the vertices of the graph, then the original graph is returned.
+ * @param graph Graph to be used as a base
+ * @param v Vertex to remove from `graph`
+ * @returns New graph with `v` removed
  */
-function vectorAdd(v1: number[], v2: number[]): number[] {
-    if (v1.length !== v2.length) {
-        throw new Error("Can't add two vectors of different lengths");
+export function deleteVertex(graph: Graph, v: Vertex): Graph {
+    // Get index of vertex to be removed
+    const idx = graph.vertices.indexOf(v);
+
+    if (idx === -1) {
+        // Vertex doesn't exist in graph, so don't remove anything
+        return graph;
+    } else {
+        // Delete vertex at specified index
+        return deleteVertexFromIndex(graph, idx);
     }
-
-    let sum = new Array<number>(v1.length);
-
-    for (let i = 0; i < v1.length; i++) {
-        sum[i] = v1[i] + v2[i];
-    }
-
-    return sum;
 }
 
 /**
- * Multiply each element of a vector by a constant
- * @param v Vector
- * @param c Constant by which each element of `v` will be multiplied
- * @returns Multiplied vector
+ * Given a graph, return a new graph with the vertex at a given index removed
+ * @param graph Graph to be used as a base
+ * @param idx Index of vertex to remove
+ * @returns New graph with the vertex at `idx` removed
  */
-function vectorMultiply(v: number[], c: number): number[] {
-    return v.map(x => x * c);
-}
+export function deleteVertexFromIndex(graph: Graph, idx: number): Graph {
+    // Remove vertex from list of vertices
+    const newVertices = structuredClone(graph.vertices);
+    newVertices.splice(idx, 1);
 
-/**
- * Divide each element of a vector by a constant
- * @param v Vector
- * @param c Nonzero constant by which each element of `v` will be divided
- * @returns Divided vector
- */
-function vectorDivide(v: number[], c: number): number[] {
-    if (c === 0) {
-        throw new Error("Division by 0");
-    }
-
-    return vectorMultiply(v, 1/c);
-}
-
-/**
- * Calculate the norm of a vector
- * @param v Vector
- * @returns Norm of vector
- */
-function vectorNorm(v: number[]): number {
-    let norm = 0;
-
-    for (const x of v) {
-        norm += Math.pow(x, 2);
-    }
-
-    return Math.sqrt(norm);
-}
-
-export function lineGraph(graph: Graph): Graph {
-    // Convert edges into vertices
-    const newVertices = graph.edges.map(e => {
-        const midpoint = getEdgeMidpoint(e);
-        return {
-            label: `${e.source.label}${e.destination.label}`,
-            xpos: midpoint.x,
-            ypos: midpoint.y,
-            color: "#FFFFFF"
+    const newEdges: Map<number, Edge[]>[] = [];
+    for (let [i, edgeMap] of graph.edges.entries()) {
+        if (i === idx) {
+            // Skip index of deleted vertex
+            continue;
+        } else if (i > idx) {
+            // Decrement the index of this vertex to account for deletion of
+            // the vertex at the index `idx`
+            i -= 1;
         }
-    })
 
-    // Iterate through edges and find all edges with a vertex in common
-    const newEdges = [];
-    for (let i = 0; i < graph.edges.length; i++) {
-        const e1 = graph.edges[i];
-
-        for (let j = i; j < graph.edges.length; j++) {
-            const e2 = graph.edges[j];
-
-            if (e1 === e2) {
-                continue
-            };
-
-            if (
-                e1.source === e2.source
-                || e1.source === e2.destination
-                || e1.destination === e2.source
-                || e1.destination === e2.destination
-            ) {
-                // If e1 and e2 have a vertex in common, create an edge between
-                // the vertices that correspond to e1 and e2
-                newEdges.push({
-                    source: newVertices[i],
-                    destination: newVertices[j],
-                    weight: "",
-                    color: "#000000"
-                })
+        for (let [j, edges] of edgeMap.entries()) {
+            if (j === idx) {
+                // Skip index of deleted vertex
+                continue;
+            } else if (j > idx) {
+                // Decrement the index of this vertex to account for the
+                // deletion of the vertex at the index `idx`
+                j -= 1;
             }
+
+            newEdges[i].set(j, edges);
         }
     }
 
+    // Return new graph
     return {
         vertices: newVertices,
         edges: newEdges
     };
 }
 
-export function complement(graph: Graph): Graph {
-    return graph;
+/**
+ * Given a graph, return a new graph with the edge at a given index removed
+ * @param graph Graph to be used as a base
+ * @param source Index of source vertex of edge
+ * @param destination Index of destination vertex of edge
+ * @param index Index of edge in the edge list of the source-destination
+ *              edge map
+ * @returns New graph with the edge at `idx` removed
+ */
+export function deleteEdge(graph: Graph, source: number, destination: number,
+    index: number): Graph {
+    const newEdges = structuredClone(graph.edges);
+
+    const edgeList = newEdges[source].get(destination);
+
+    if (edgeList !== undefined) {
+        newEdges[source].set(
+            destination, edgeList.filter((_, i) => i !== index)
+        );
+    }
+
+    return {
+        vertices: graph.vertices,
+        edges: newEdges
+    };
+}
+
+/**
+ * Given a graph, return a new graph with the label of a vertex at a given
+ * index updated
+ * @param graph Graph to be used as a base
+ * @param idx Index of vertex whose label will be updated
+ * @param label New label of vertex
+ * @returns New graph with updated vertex label
+ */
+export function changeVertexLabel(graph: Graph, idx: number,
+    label: string): Graph {
+    const newVertices = structuredClone(graph.vertices);
+    newVertices[idx].label = label;
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+/**
+ * Given a graph, return a new graph with the color of a vertex at a given
+ * index updated
+ * @param graph Graph to be used as a base
+ * @param idx Index of vertex whose color will be updated
+ * @param color New color of vertex, as a hex code in the format `"#FFFFFF"`
+ * @returns New graph with updated vertex color
+ */
+export function changeVertexColor(graph: Graph, idx: number,
+    color: string): Graph {
+    const newVertices = structuredClone(graph.vertices);
+    newVertices[idx].color = color;
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+/**
+ * Given a graph, return a new graph with the color and label of a vertex at a
+ * given index updated
+ * @param graph Graph to be used as a base
+ * @param idx Index of vertex whose color will be updated
+ * @param label New label of vertex
+ * @param color New color of vertex, as a hex code in the format `"#FFFFFF"`
+ * @returns New graph with updated vertex color
+ */
+export function changeVertexLabelAndColor(graph: Graph, idx: number,
+    label: string, color: string): Graph {
+    const newVertices = structuredClone(graph.vertices);
+    newVertices[idx].label = label;
+    newVertices[idx].color = color;
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+/**
+ * Given a graph, return a new graph with the weight of a given edge updated
+ * @param graph Graph to be used as a base
+ * @param source Index of source vertex of edge
+ * @param destination Index of destination vertex of edge
+ * @param index Index of edge whose weight will be updated in the edge list of
+ *              the source-destination edge map
+ * @param weight New weight of edge
+ * @returns New graph with updated edge weight
+ */
+export function changeEdgeWeight(graph: Graph, source: number,
+    destination: number,index: number, weight: string): Graph {
+    const newEdges = structuredClone(graph.edges);
+    
+    const edgeList = newEdges[source].get(destination);
+
+    if (edgeList === undefined) {
+        return graph;
+    } else {
+        // Modify weight (will reflect in map too)
+        edgeList[index].weight = weight;
+
+        return {
+            vertices: graph.vertices,
+            edges: newEdges
+        };
+    }
+}
+
+/**
+ * Given a graph, return a new graph with the color of a given edge updated
+ * @param graph Graph to be used as a base
+ * @param source Index of source vertex of edge
+ * @param destination Index of destination vertex of edge
+ * @param index Index of edge whose color will be updated in the edge list of
+ *              the source-destination edge map
+ * @param color New color of edge, as a hex code in the format `"#FFFFFF"`
+ * @returns New graph with updated edge color
+ */
+export function changeEdgeColor(graph: Graph, source: number,
+    destination: number,index: number, color: string): Graph {
+    const newEdges = structuredClone(graph.edges);
+    
+    const edgeList = newEdges[source].get(destination);
+
+    if (edgeList === undefined) {
+        return graph;
+    } else {
+        // Modify color (will reflect in map too)
+        edgeList[index].color = color;
+
+        return {
+            vertices: graph.vertices,
+            edges: newEdges
+        };
+    }
+}
+
+/**
+ * Given a graph, return a new graph with the weight and color of a given edge
+ * updated
+ * @param graph Graph to be used as a base
+ * @param source Index of source vertex of edge
+ * @param destination Index of destination vertex of edge
+ * @param index Index of edge whose color will be updated in the edge list of
+ *              the source-destination edge map
+ * @param color New color of edge, as a hex code in the format `"#FFFFFF"`
+ * @param weight New weight of edge
+ * @returns New graph with updated edge color
+ */
+export function changeEdgeWeightAndColor(graph: Graph, source: number,
+    destination: number, index: number, weight: string, color: string): Graph {
+    const newEdges = structuredClone(graph.edges);
+    
+    const edgeList = newEdges[source].get(destination);
+
+    if (edgeList === undefined) {
+        return graph;
+    } else {
+        // Modify weight and color (will reflect in map too)
+        edgeList[index].weight = weight;
+        edgeList[index].color = color;
+
+        return {
+            vertices: graph.vertices,
+            edges: newEdges
+        };
+    }
+}
+
+/**
+ * Given a graph, return a new graph with the location of a vertex at a given
+ * index updated
+ * @param graph Graph to be used as a base
+ * @param idx Index of vertex whose location will be changed
+ * @param x New `x`-coordinate of vertex
+ * @param y New `y`-coordinate of vertex
+ * @param width Width of viewport in which graph is displayed
+ * @param height Height of viewport in which graph is displayed
+ * @param gridBase Grid base, if any, to round new coordinates to
+ * @returns New graph with updated vertex location
+ */
+export function changeVertexLocation(graph: Graph, idx: number, x: number,
+    y: number, width?: number, height?: number, gridBase?: number): Graph {
+    const newVertices = structuredClone(graph.vertices);
+    let newX = x;
+    let newY = y;
+
+    if (width !== undefined) {
+        // If width is defined, then ensure x is between 0 and width
+        newX = squeeze(x, 0, width);
+    }
+
+    if (height !== undefined) {
+        // If height is defined, then ensure y is between 0 and height
+        newY = squeeze(y, 0, height);
+    }
+
+    if (gridBase !== undefined) {
+        // If a grid base is provided, round the X and Y values to it
+        newX = roundToBase(newX, gridBase);
+        newY = roundToBase(newY, gridBase);
+    }
+
+    // Update x and y position of vertices
+    newVertices[idx].xpos = newX;
+    newVertices[idx].ypos = newY;
+
+    // Return new graph with updated vertex location
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+/**
+ * Given a graph, return the smallest unused integer vertex label. Resulting
+ * value will be between 0 and |V|.
+ * @param graph Graph whose vertex labels will be checked
+ * @returns Smallest unused number in the vertex labels
+ */
+export function getSmallestLabel(graph: Graph): number {
+    // Get all numeric vertex labels by filtering out non-integer vertex labels
+    // and retrieving the remaining vertex labels as numbers
+    const labels = graph.vertices.filter(v => isInteger(v.label))
+                                 .map(v => Number(v.label));
+
+    // Keep track of which numbers have been seen in a boolean array. Note that
+    // the smallest number is guaranteed to be in the range [0..n-1].
+    const n = labels.length;
+    const boolArr: boolean[] = new Array(n).fill(false);
+
+    for (const name of labels) {
+        if (name < n) {
+            boolArr[name] = true;
+        }
+    }
+
+    // Return the first false index, which represents the lowest value in the
+    // range [1..n] that is not in the `names` array
+    for (let i = 0; i < n; i++) {
+        if (!boolArr[i]) {
+            return i;
+        }
+    }
+
+    // If no index is true, then every value in the range [0..n-1] must be in
+    // the `names` array, and thus n is the smallest possible label
+    return n;
+}
+
+/**
+ * Given a graph, return a new graph with the locations of each vertex rounded
+ * to a multiple of a given base
+ * @param graph Graph to be used as a base
+ * @param base Integer base, which each vertex's `x`- and `y`-coordinates will
+ *             be a multiple of
+ * @returns New graph with rounded vertex locations
+ */
+export function snapVerticesToGrid(graph: Graph, base: number): Graph {
+    // Create deep copy of graph
+    const newGraph = structuredClone(graph);
+
+    // Mutate new graph by rounding the coordinates of each vertex to base
+    for (const v of newGraph.vertices) {
+        v.xpos = roundToBase(v.xpos, base);
+        v.ypos = roundToBase(v.ypos, base);
+    }
+
+    return newGraph;
+}
+
+type EdgeIterator = TupleMap<
+    number, // Tuples of the form [number, number]
+    {
+        source: number,
+        destination: number,
+        edge: Edge,
+        index: number
+    }[]
+>;
+
+/**
+ * Return a map of edges that groups edges between two vertices together into
+ * one edge list regardless of the direction of the edges.
+ * 
+ * For example, given two vertices `v1` and `v2` with edges `a` (`v1 -> v2`)
+ * and `b` (`v2 -> v1`), `a` and `b` will be in the same list in the map,
+ * both corresponding to the key `(v1, v2)` (assuming the index of `v1` is less
+ * than that of `v2`).
+ * 
+ * In order to preserve directional information, the
+ * indices of the source and destination vertices are stored with each list
+ * item. To enable interactivity, the index of each edge in the original graph
+ * is also stored.
+ * @param graph Graph whose edges will be formatted into an iterator
+ * @returns Map of edges in the format `[(v1, v2), edges]` for all vertices 
+ *          `v1` and `v2` such that `v1` and `v2` have at least one edge
+ *          between them
+ */
+export function getEdgeIterator(graph: Graph): EdgeIterator {
+    // We provide the Number() function for converting from strings to numbers
+    const iterator: EdgeIterator = new TupleMap(Number);
+
+    for (const [i, edgeMap] of graph.edges.entries()) {
+        for (const [j, edges] of edgeMap.entries()) {
+            // For the edge ij, the first vertex (v1) will always be the one
+            // with the lower index, while the second vertex (v2) will always
+            // be the one with the higher index
+            const [v1, v2] = i <= j ? [i, j] : [j, i];
+
+            // Create a list of ij edges which will be inserted in the map with
+            // the key [v1, v2]
+            const edgesToInsert = edges.map((e, idx) => ({
+                source: i,
+                destination: j,
+                edge: e,
+                index: idx
+            }));
+
+            // Get all edges in the map between the vertices i and j
+            const ijEdges = iterator.get([v1, v2]);
+
+            if (ijEdges !== undefined) {
+                // Insert new edges alongside pre-existing ij edges
+                iterator.set([v1, v2], [...ijEdges, ...edgesToInsert]);
+            } else {
+                // Create new list of ij edges
+                iterator.set([v1, v2], edgesToInsert);
+            }
+        }
+    }
+
+    return iterator;
 }

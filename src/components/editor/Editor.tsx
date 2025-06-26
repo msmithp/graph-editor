@@ -1,20 +1,24 @@
 import React, { useState } from "react";
-import type { Graph, Vertex } from "../../types/Graph";
+import type { Edge, Graph, Vertex } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
 import { 
     deleteVertexFromIndex, changeVertexLocation, createVertex,
-    getSmallestLabel, deleteEdgeFromIndex, createEdge, changeVertexLabel,
+    getSmallestLabel, deleteEdge, createEdge, changeVertexLabel,
     changeVertexColor, changeEdgeColor, changeEdgeWeight,
-    snapVerticesToGrid
-} from "../../utils/editorUtils";
+    snapVerticesToGrid,
+    getEdgeIterator
+} from "../../utils/graphUtils";
 import {
     VertexGraphic, EdgeGraphic, Toolbar, EditVertexMenu, EditEdgeMenu,
     Grid
 } from ".";
 import { getSVGPoint } from "../../utils/utils";
 import "../../style/Editor.css";
-import { GeneratorsMenu, ImportExportMenu, InformationMenu, OperationsMenu, SettingsMenu } from "./menus";
-import { complement, lineGraph } from "../../utils/graphUtils";
+import { 
+    GeneratorsMenu, ImportExportMenu, InformationMenu, OperationsMenu,
+    SettingsMenu
+} from "./menus";
+import { complement, lineGraph } from "../../utils/graphAlgorithms";
 
 
 // Placeholder data
@@ -27,16 +31,26 @@ for (let i = 0; i < 10; i++) {
         color: "#FFFFFF"
     });
 }
-const edges = [
-    {source: vs[0], destination: vs[1], weight: "", color: "#00FFAA"},
-    {source: vs[1], destination: vs[2], weight: "", color: "#FF11AA"}
-];
+// const edges = [
+//     {source: 0, destination: 1, weight: "", color: "#00FFAA"},
+//     {source: 1, destination: 2, weight: "", color: "#FF11AA"}
+// ];
+const edges: Map<number, Edge[]>[] = Array.from(
+    { length: vs.length }, () => new Map()
+);
+edges[0].set(1, [{ weight: "", color: "#00FFAA" }]);
+edges[1].set(2, [{ weight: "", color: "#FF11AA" }]);
+edges[6].set(5, [{ weight: "", color: "#00FFAA" }, { weight: "", color: "#00FFAA" }]);
+edges[5].set(6, [{ weight: "", color: "#00FFAA" }]);
+edges[5].set(2, [{ weight: "", color: "#00FFAA" }]);
 const placeholderGraph: Graph = {
     vertices: vs,
     edges: edges
 };
 // End placeholder data
 
+console.log(placeholderGraph);
+console.log(getEdgeIterator(placeholderGraph));
 
 const WIDTH = 800;
 const HEIGHT = 800;
@@ -53,9 +67,12 @@ function Editor() {
     const [mode, setMode] = useState<Mode>("MOVE");
     const [mousePos, setMousePos] = 
         useState<{x: number, y: number}>({ x: 0, y: 0 });
-    const [fromVertex, setFromVertex] = useState<Vertex | null>(null);
+    const [fromVertex, setFromVertex] = useState<number | null>(null);
     const [selectedVertex, setSelectedVertex] = useState<number | null>(null);
-    const [selectedEdge, setSelectedEdge] = useState<number | null>(null);
+    const [selectedEdge, setSelectedEdge] = 
+        useState<{source: number, destination: number, index: number } | null>(
+            null
+        );
     const [selectedColor, setSelectedColor] = useState<string>("#000000");
     const [gridBase, setGridBase] = useState<number | null>(null);
     const [isGridShown, setIsGridShown] = useState<boolean>(false);
@@ -81,11 +98,19 @@ function Editor() {
     }
 
     /**
-     * Set the edge at a given index as selected, enabling editing
-     * @param index Index of edge in the list of edges to be selected
+     * Set a given edge as selected, enabling editing
+     * @param source Index of source vertex of edge
+     * @param destination Index of destination vertex of edge
+     * @param index Index of edge in the edge list of the source-destination
+     *              edge map
      */
-    function selectEdge(index: number): void {
-        setSelectedEdge(index);
+    function selectEdge(source: number, destination: number,
+        index: number): void {
+        setSelectedEdge({
+            source: source,
+            destination: destination,
+            index: index
+        });
         setSelectedVertex(null);
     }
 
@@ -94,8 +119,6 @@ function Editor() {
      * @param index Index of the vertex in the list of vertices to be deleted
      */
     function eraseVertex(index: number): void {
-        const currentVertex = graph.vertices[index];
-
         if (selectedVertex != null) {
             if (index === selectedVertex) {
                 // If vertex being erased is currently selected, deselect it
@@ -112,9 +135,8 @@ function Editor() {
         // If vertex being erased is an endpoint of currently
         // selected edge, deselect the edge before erasing
         if (selectedEdge !== null) {
-            const currentEdge = graph.edges[selectedEdge];
-            if (currentEdge.source === currentVertex
-                || currentEdge.destination === currentVertex) {
+            if (selectedEdge.source === index
+                || selectedEdge.destination === index) {
                 setSelectedEdge(null);
             }
         }
@@ -123,24 +145,40 @@ function Editor() {
     }
 
     /**
-     * Erase the edge at a given index
-     * @param index Index of the edge in the list of edges to be deleted
+     * Erase a given edge
+     * @param source Index of source vertex of edge
+     * @param destination Index of destination vertex of edge
+     * @param index Index of edge in the edge list of the source-destination
+     *              edge map
      */
-    function eraseEdge(index: number): void {
+    function eraseEdge(source: number, destination: number,
+        index: number): void {
         if (selectedEdge !== null) {
             // If edge being erased is currently selected, deselect it before
             // erasing it
-            if (index === selectedEdge) {
-                setSelectedEdge(null);
-            } else if (index < selectedEdge) {
-                // If edge being erased has a lower index than the currently
-                // selected edge, decrement the index of the currently selected
-                // edge by 1
-                setSelectedEdge(selectedEdge - 1);
+            if (source === selectedEdge.source 
+                && destination === selectedEdge.destination) {
+                if (index === selectedEdge.index) {
+                    // Edge being erased is currently selected, so deselect it
+                    // before erasing it
+                    setSelectedEdge(null);
+                } else {
+                    // Currently selected edge is in the same edge list as the
+                    // edge being erased, so the index of the currently
+                    // selected edge must be decremented if it is greater than
+                    // that of the edge being erased
+                    if (index < selectedEdge.index) {
+                        setSelectedEdge({
+                            ...selectedEdge,
+                            index: selectedEdge.index - 1
+                        });
+                    }
+                }
             }
         }
 
-        setGraph(deleteEdgeFromIndex(graph, index));
+        // Finally, erase the edge
+        setGraph(deleteEdge(graph, source, destination, index));
     }
 
     /**
@@ -206,13 +244,25 @@ function Editor() {
                 case "DRAW_EDGES":
                     if (fromVertex === null) {
                         // Start drawing a new edge from this vertex
-                        return () => setFromVertex(v);
+                        return () => setFromVertex(i);
                     } else {
                         // Create the new edge
                         return () => {
-                            setGraph(createEdge(graph, fromVertex, v));
+                            setGraph(createEdge(graph, fromVertex, i));
                             setFromVertex(null);
-                            selectEdge(graph.edges.length);
+
+                            // Get index of newly created edge in the edge list
+                            const newEdge = graph.edges[fromVertex]
+                                                 .get(i)?.length;
+
+                            if (newEdge !== undefined) {
+                                selectEdge(fromVertex, i, newEdge);
+                            } else {
+                                // This code should (hopefully) never run since
+                                // it should always be able to access the new
+                                // edge
+                                setSelectedEdge(null);
+                            }
                         };
                     }
                 case "ERASE":
@@ -243,47 +293,94 @@ function Editor() {
         );
     });
 
-    const edges = graph.edges.map((e, i) => {
-        /**
-         * Function that will be called when this edge is clicked. Changes
-         * based on the current editor mode.
-         * @param mode Current editor mode
-         * @returns An `onClick()` function that will be called when this
-         *          edge is clicked
-         */
-        function getOnClickEdge(mode: Mode): () => void {
-            switch(mode) {
-                case "MOVE":
-                    return () => selectEdge(i);
-                case "ERASE":
-                    // Delete this edge
-                    return () => eraseEdge(i);
-                case "PAINT":
-                    // Set the color of this edge to the selected color
-                    return () => setGraph(
-                        changeEdgeColor(graph, i, selectedColor)
-                    );
-                case "EYEDROP":
-                    // Set selected color to color of this edge
-                    return () => setSelectedColor(e.color);
-                default:
-                    // Do nothing otherwise
-                    return () => { return };
-            }
-        }
+    // const edges = graph.edges.map((e, i) => {
+    //     /**
+    //      * Function that will be called when this edge is clicked. Changes
+    //      * based on the current editor mode.
+    //      * @param mode Current editor mode
+    //      * @returns An `onClick()` function that will be called when this
+    //      *          edge is clicked
+    //      */
+    //     function getOnClickEdge(mode: Mode): () => void {
+    //         switch(mode) {
+    //             case "MOVE":
+    //                 return () => selectEdge(i);
+    //             case "ERASE":
+    //                 // Delete this edge
+    //                 return () => eraseEdge(i);
+    //             case "PAINT":
+    //                 // Set the color of this edge to the selected color
+    //                 return () => setGraph(
+    //                     changeEdgeColor(graph, i, selectedColor)
+    //                 );
+    //             case "EYEDROP":
+    //                 // Set selected color to color of this edge
+    //                 return () => setSelectedColor(e.color);
+    //             default:
+    //                 // Do nothing otherwise
+    //                 return () => { return };
+    //         }
+    //     }
 
-        return (
-            <EdgeGraphic
-                key={i}
-                edge={e}
-                isDirected={isDirected}
-                onClick={getOnClickEdge(mode)}
-            />
-        );
-    });
+    //     return (
+    //         <EdgeGraphic
+    //             key={i}
+    //             source={graph.vertices[e.source]}
+    //             destination={graph.vertices[e.destination]}
+    //             edge={e}
+    //             isDirected={isDirected}
+    //             onClick={getOnClickEdge(mode)}
+    //         />
+    //     );
+    // });
+    const edges = getEdgeIterator(graph).arrayMap((_, edges) => {
+        return edges.map(e => {
+            /**
+             * Function that will be called when this edge is clicked. Changes
+             * based on the current editor mode.
+             * @param mode Current editor mode
+             * @returns An `onClick()` function that will be called when this
+             *          edge is clicked
+             */
+            function getOnClickEdge(mode: Mode): () => void {
+                switch(mode) {
+                    case "MOVE":
+                        return () => selectEdge(e.source, e.destination, 
+                            e.index);
+                    case "ERASE":
+                        // Delete this edge
+                        return () => eraseEdge(e.source, e.destination, 
+                            e.index);
+                    case "PAINT":
+                        // Set the color of this edge to the selected color
+                        return () => setGraph(
+                            changeEdgeColor(graph, e.source, e.destination, 
+                                e.index, selectedColor)
+                        );
+                    case "EYEDROP":
+                        // Set selected color to color of this edge
+                        return () => setSelectedColor(e.edge.color);
+                    default:
+                        // Do nothing otherwise
+                        return () => { return };
+                }
+            }
+
+            return (
+                <EdgeGraphic
+                    key={`${e.source}-${e.destination} ${e.index}`}
+                    source={graph.vertices[e.source]}
+                    destination={graph.vertices[e.destination]}
+                    edge={e.edge}
+                    isDirected={isDirected}
+                    onClick={getOnClickEdge(mode)}
+                />
+            );
+        });
+    }).flat();
 
     // Set up info and editor for selected vertex/edge, if any
-    let selectedElementEditor;
+    let selectedElementEditor = <p>No element selected</p>;
     if (selectedVertex !== null) {
         selectedElementEditor = <EditVertexMenu
             vertex={graph.vertices[selectedVertex]}
@@ -295,17 +392,22 @@ function Editor() {
             )}
         />;
     } else if (selectedEdge !== null) {
-        selectedElementEditor = <EditEdgeMenu
-            edge={graph.edges[selectedEdge]} 
-            onChangeColor={color => setGraph(
-                changeEdgeColor(graph, selectedEdge, color)
-            )}
-            onChangeWeight={weight => setGraph(
-                changeEdgeWeight(graph, selectedEdge, weight)
-            )}
-        />;
-    } else {
-        selectedElementEditor = <p>No element selected</p>;
+        const edgeList = graph.edges[selectedEdge.source]
+                         .get(selectedEdge.destination);
+
+        if (edgeList !== undefined) {
+            selectedElementEditor = <EditEdgeMenu
+                edge={edgeList[selectedEdge.index]} 
+                onChangeColor={color => setGraph(
+                    changeEdgeColor(graph, selectedEdge.source,
+                        selectedEdge.destination, selectedEdge.index, color)
+                )}
+                onChangeWeight={weight => setGraph(
+                    changeEdgeWeight(graph, selectedEdge.source,
+                        selectedEdge.destination, selectedEdge.index, weight)
+                )}
+            />;
+        }
     }
 
     return (
@@ -351,7 +453,8 @@ function Editor() {
                         { fromVertex &&
                             <path 
                                 className="edgePath"
-                                d={`M ${fromVertex.xpos} ${fromVertex.ypos} 
+                                d={`M ${graph.vertices[fromVertex].xpos} 
+                                    ${graph.vertices[fromVertex].ypos} 
                                     L ${mousePos.x} ${mousePos.y}`}
                                 stroke="#000000"
                                 strokeWidth="2.5" 

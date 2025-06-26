@@ -1,15 +1,17 @@
-import type { Edge } from "../../types/Graph";
-import { getDirectedEdgeArrowPoints, getEdgeMidpoint } from "../../utils/graphUtils";
+import type { Edge, Vertex } from "../../types/Graph";
+import { getEdgeMidpoint } from "../../utils/graphicsUtils";
 
 interface EdgeProps {
+    source: Vertex,
+    destination: Vertex,
     edge: Edge
     isDirected?: boolean,
     onClick: () => void
 }
 
-function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
-    const midpoint = getEdgeMidpoint(edge);
-    const arrowPoints = getDirectedEdgeArrowPoints(edge);
+function EdgeGraphic({ source, destination, edge,
+    isDirected, onClick }: EdgeProps) {
+    const midpoint = getEdgeMidpoint(source, destination);
 
     return (
         <g 
@@ -20,8 +22,8 @@ function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
                 easier to click */}
             <path 
                 className="edgePath"
-                d={`M ${edge.source.xpos} ${edge.source.ypos} 
-                    L ${edge.destination.xpos} ${edge.destination.ypos}`}
+                d={`M ${source.xpos} ${source.ypos} 
+                    L ${destination.xpos} ${destination.ypos}`}
                 strokeWidth="17"
                 visibility="hidden"
                 pointerEvents="all"
@@ -31,15 +33,15 @@ function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
             {/* This is the actual edge */}
             <path 
                 className="edgePath"
-                d={`M ${edge.source.xpos} ${edge.source.ypos} 
-                    L ${edge.destination.xpos} ${edge.destination.ypos}`}
+                d={`M ${source.xpos} ${source.ypos} 
+                    L ${destination.xpos} ${destination.ypos}`}
                 stroke={edge.color}
                 strokeWidth="2.5"
             >
             </path>
 
             {/* Draw arrow head if edge is directed */}
-            { isDirected &&
+            {/* { isDirected &&
                 <polygon
                     className="edgePath"
                     points={
@@ -50,7 +52,7 @@ function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
                     fill={edge.color}
                 >
                 </polygon>
-            }
+            } */}
 
             {/* Display edge weight, if any */}
             { edge.weight !== "" &&
