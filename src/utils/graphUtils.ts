@@ -108,28 +108,30 @@ export function deleteVertexFromIndex(graph: Graph, idx: number): Graph {
     const newVertices = structuredClone(graph.vertices);
     newVertices.splice(idx, 1);
 
-    const newEdges: Map<number, Edge[]>[] = [];
-    for (let [i, edgeMap] of graph.edges.entries()) {
+    const newEdges: Map<number, Edge[]>[] = Array.from(
+        { length: newVertices.length }, () => new Map()
+    );
+    for (const [i, edgeMap] of graph.edges.entries()) {
         if (i === idx) {
             // Skip index of deleted vertex
             continue;
-        } else if (i > idx) {
-            // Decrement the index of this vertex to account for deletion of
-            // the vertex at the index `idx`
-            i -= 1;
         }
 
-        for (let [j, edges] of edgeMap.entries()) {
+        // Decrement the index of this vertex to account for deletion of
+        // the vertex at the index `idx`
+        const v1 = i > idx ? i - 1 : i;
+
+        for (const [j, edges] of edgeMap.entries()) {
             if (j === idx) {
                 // Skip index of deleted vertex
                 continue;
-            } else if (j > idx) {
-                // Decrement the index of this vertex to account for the
-                // deletion of the vertex at the index `idx`
-                j -= 1;
             }
 
-            newEdges[i].set(j, edges);
+            // Decrement the index of this vertex to account for the
+            // deletion of the vertex at the index `idx`
+            const v2 = j > idx ? j - 1 : j;
+
+            newEdges[v1].set(v2, edges);
         }
     }
 

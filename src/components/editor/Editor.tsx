@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { Edge, Graph, Vertex } from "../../types/Graph";
+import type { Edge, Graph } from "../../types/Graph";
 import type { Mode } from "../../types/Menu";
 import { 
     deleteVertexFromIndex, changeVertexLocation, createVertex,
@@ -19,6 +19,7 @@ import {
     SettingsMenu
 } from "./menus";
 import { complement, lineGraph } from "../../utils/graphAlgorithms";
+import IconDefs from "../svg/IconDefs";
 
 
 // Placeholder data
@@ -31,10 +32,6 @@ for (let i = 0; i < 10; i++) {
         color: "#FFFFFF"
     });
 }
-// const edges = [
-//     {source: 0, destination: 1, weight: "", color: "#00FFAA"},
-//     {source: 1, destination: 2, weight: "", color: "#FF11AA"}
-// ];
 const edges: Map<number, Edge[]>[] = Array.from(
     { length: vs.length }, () => new Map()
 );
@@ -248,19 +245,19 @@ function Editor() {
                     } else {
                         // Create the new edge
                         return () => {
-                            setGraph(createEdge(graph, fromVertex, i));
+                            const newGraph = createEdge(graph, fromVertex, i);
+                            setGraph(newGraph);
                             setFromVertex(null);
 
-                            // Get index of newly created edge in the edge list
-                            const newEdge = graph.edges[fromVertex]
-                                                 .get(i)?.length;
+                            // Get edge list corresponding to source and
+                            // destination vertices of new edge
+                            const edgeList = newGraph.edges[fromVertex].get(i);
 
-                            if (newEdge !== undefined) {
-                                selectEdge(fromVertex, i, newEdge);
+                            if (edgeList !== undefined) {
+                                selectEdge(fromVertex, i, edgeList.length - 1);
                             } else {
-                                // This code should (hopefully) never run since
-                                // it should always be able to access the new
-                                // edge
+                                // This code should never run since it should
+                                // always be possible to access the new edge
                                 setSelectedEdge(null);
                             }
                         };
@@ -293,46 +290,6 @@ function Editor() {
         );
     });
 
-    // const edges = graph.edges.map((e, i) => {
-    //     /**
-    //      * Function that will be called when this edge is clicked. Changes
-    //      * based on the current editor mode.
-    //      * @param mode Current editor mode
-    //      * @returns An `onClick()` function that will be called when this
-    //      *          edge is clicked
-    //      */
-    //     function getOnClickEdge(mode: Mode): () => void {
-    //         switch(mode) {
-    //             case "MOVE":
-    //                 return () => selectEdge(i);
-    //             case "ERASE":
-    //                 // Delete this edge
-    //                 return () => eraseEdge(i);
-    //             case "PAINT":
-    //                 // Set the color of this edge to the selected color
-    //                 return () => setGraph(
-    //                     changeEdgeColor(graph, i, selectedColor)
-    //                 );
-    //             case "EYEDROP":
-    //                 // Set selected color to color of this edge
-    //                 return () => setSelectedColor(e.color);
-    //             default:
-    //                 // Do nothing otherwise
-    //                 return () => { return };
-    //         }
-    //     }
-
-    //     return (
-    //         <EdgeGraphic
-    //             key={i}
-    //             source={graph.vertices[e.source]}
-    //             destination={graph.vertices[e.destination]}
-    //             edge={e}
-    //             isDirected={isDirected}
-    //             onClick={getOnClickEdge(mode)}
-    //         />
-    //     );
-    // });
     const edges = getEdgeIterator(graph).arrayMap((_, edges) => {
         return edges.map(e => {
             /**
@@ -439,6 +396,9 @@ function Editor() {
                         onMouseMove={mode === "DRAW_EDGES" ?
                             onMouseMoveSvg : undefined}
                     >
+                        {/* Import icons for use in SVG */}
+                        <IconDefs />
+
                         {/* Display grid in background */}
                         { gridBase && isGridShown &&
                             <Grid
@@ -450,7 +410,7 @@ function Editor() {
 
                         {/* Display a prospective edge at the location of the
                             cursor if a fromVertex has been selected */}
-                        { fromVertex &&
+                        { fromVertex !== null &&
                             <path 
                                 className="edgePath"
                                 d={`M ${graph.vertices[fromVertex].xpos} 

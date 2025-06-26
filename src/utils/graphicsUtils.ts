@@ -1,4 +1,4 @@
-import type { Edge, Graph, Vertex } from "../types/Graph";
+import type { Vertex } from "../types/Graph";
 import type { Point2D } from "../types/Graphics";
 import { VERTEX_RADIUS } from "./constants";
 
@@ -15,6 +15,20 @@ export function getEdgeMidpoint(v1: Vertex, v2: Vertex): Point2D {
     };
 }
 
+/**
+ * Get endpoint of a directed edge such that an arrow can be drawn between the
+ * returned endpoint and the border of the destination vertex
+ * @param source Source vertex of edge
+ * @param destination Destination vertex of edge
+ * @returns x- and y-coordinates of the point at which an arrow head can be
+ *          placed
+ */
+export function getDirectedEdgeEnd(source: Vertex, 
+    destination: Vertex): Point2D {
+    return getPointOnLine(destination.xpos, destination.ypos,
+        source.xpos, source.ypos, VERTEX_RADIUS + 15);
+}
+
 interface ArrowPoints {
     left: Point2D,
     right: Point2D,
@@ -24,16 +38,18 @@ interface ArrowPoints {
 /**
  * Calculate the coordinates necessary to draw a triangle at the end of an edge
  * to represent the arrow head of a directed edge
- * @param e Directed edge
+ * @param source Source vertex of edge
+ * @param destination Destination vertex of edge
  * @returns x- and y-coordinates of the middle (arrow tip), left (left end of
  * base), and right (right end of base) points of a triangle to draw on a
  * directed graph edge
  */
-export function getDirectedEdgeArrowPoints(e: Edge): ArrowPoints {
-    if (e.source.xpos === e.destination.xpos 
-        && e.source.ypos === e.destination.ypos) {
+export function getDirectedEdgeArrowPoints(source: Vertex, 
+    destination: Vertex): ArrowPoints {
+    if (source.xpos === destination.xpos 
+        && source.ypos === destination.ypos) {
         // Return coordinates of source vertex to avoid division by 0
-        const default_coords = { x: e.source.xpos, y: e.source.ypos };
+        const default_coords = { x: source.xpos, y: source.ypos };
         return {
             left: default_coords,
             right: default_coords,
@@ -48,11 +64,11 @@ export function getDirectedEdgeArrowPoints(e: Edge): ArrowPoints {
     const ARROW_BASE_LENGTH = 15;
 
     // Get tip and base points of arrow head
-    const arrowTipPoint = getDirectedEdgeArrowTipPoint(e);
+    const arrowTipPoint = getDirectedEdgeArrowTipPoint(source, destination);
     const arrowBasePoint = getPointOnLine(arrowTipPoint.x, arrowTipPoint.y,
-        e.source.xpos, e.source.ypos, ARROW_HEIGHT);
+        source.xpos, source.ypos, ARROW_HEIGHT);
 
-    if (e.source.ypos === e.destination.ypos) {
+    if (source.ypos === destination.ypos) {
         // To avoid division by 0, if the two vertices are at the same
         // y-position, return early
         return {
@@ -69,8 +85,8 @@ export function getDirectedEdgeArrowPoints(e: Edge): ArrowPoints {
     }
 
     // Get negative inverse of slope as a vector
-    const rise = e.destination.ypos - e.source.ypos;
-    const run = e.destination.xpos - e.source.xpos;
+    const rise = destination.ypos - source.ypos;
+    const run = destination.xpos - source.xpos;
     const invSlopeVector = [rise, -run];
 
     // Normalize negative inverse of slope to get unit vector
@@ -111,17 +127,19 @@ export function getDirectedEdgeArrowPoints(e: Edge): ArrowPoints {
  * arrow point to the destination vertex. The middle point is where the arrow
  * head will be drawn. The location of the middle point is based on the radius
  * of the vertex graphics.
- * @param e Directed edge
+ * @param source Source vertex of edge
+ * @param destination Destination vertex of edge
  * @returns x- and y-coordinates of the middle point at which an arrow head
  *          will be drawn
  */
-function getDirectedEdgeArrowTipPoint(e: Edge): { x: number, y: number } {
+function getDirectedEdgeArrowTipPoint(source: Vertex,
+    destination: Vertex): Point2D {
     // Note that we consider the destination to be the first point and the
     // source to be the second point so that we are basing the distance
     // traveled on the position of the destination vertex, which is where the
     // arrow will be drawn
-    return getPointOnLine(e.destination.xpos, e.destination.ypos,
-        e.source.xpos, e.source.ypos, VERTEX_RADIUS);
+    return getPointOnLine(destination.xpos, destination.ypos,
+        source.xpos, source.ypos, VERTEX_RADIUS);
 }
 
 /**

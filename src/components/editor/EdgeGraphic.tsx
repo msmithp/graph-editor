@@ -1,5 +1,7 @@
 import type { Edge, Vertex } from "../../types/Graph";
-import { getEdgeMidpoint } from "../../utils/graphicsUtils";
+import { 
+    getDirectedEdgeEnd, getEdgeMidpoint
+} from "../../utils/graphicsUtils";
 
 interface EdgeProps {
     source: Vertex,
@@ -12,6 +14,9 @@ interface EdgeProps {
 function EdgeGraphic({ source, destination, edge,
     isDirected, onClick }: EdgeProps) {
     const midpoint = getEdgeMidpoint(source, destination);
+    const endpoint = isDirected ? 
+        getDirectedEdgeEnd(source, destination) : 
+        { x: destination.xpos, y: destination.ypos };
 
     return (
         <g 
@@ -34,25 +39,12 @@ function EdgeGraphic({ source, destination, edge,
             <path 
                 className="edgePath"
                 d={`M ${source.xpos} ${source.ypos} 
-                    L ${destination.xpos} ${destination.ypos}`}
+                    L ${endpoint.x} ${endpoint.y}`}
                 stroke={edge.color}
                 strokeWidth="2.5"
+                markerEnd={ isDirected ? "url(#arrow)" : undefined}
             >
             </path>
-
-            {/* Draw arrow head if edge is directed */}
-            {/* { isDirected &&
-                <polygon
-                    className="edgePath"
-                    points={
-                        `${arrowPoints.left.x},${arrowPoints.left.y}
-                            ${arrowPoints.right.x},${arrowPoints.right.y},
-                            ${arrowPoints.middle.x}, ${arrowPoints.middle.y}`
-                    }
-                    fill={edge.color}
-                >
-                </polygon>
-            } */}
 
             {/* Display edge weight, if any */}
             { edge.weight !== "" &&
