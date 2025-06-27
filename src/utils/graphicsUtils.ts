@@ -15,18 +15,59 @@ export function getEdgeMidpoint(v1: Vertex, v2: Vertex): Point2D {
     };
 }
 
-/**
- * Get endpoint of a directed edge such that an arrow can be drawn between the
- * returned endpoint and the border of the destination vertex
- * @param source Source vertex of edge
- * @param destination Destination vertex of edge
- * @returns x- and y-coordinates of the point at which an arrow head can be
- *          placed
- */
-export function getDirectedEdgeEnd(source: Vertex, 
-    destination: Vertex): Point2D {
-    return getPointOnLine(destination.xpos, destination.ypos,
-        source.xpos, source.ypos, VERTEX_RADIUS + 15);
+export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex, 
+    numEdges: number): Point2D[] {
+    if (numEdges < 2) {
+        throw new Error("Must have at least two edges");
+    }
+
+    // Get distance from the midpoint to the left or right
+    const distanceFromMid = numEdges * 20;
+
+    // Start by getting midpoint between the two vertices
+    const midpoint = getEdgeMidpoint(v1, v2);
+
+    if (v1.ypos === v2.ypos) {
+        // To avoid division by 0, if the two vertices are at the same
+        // y-position, return early
+        return getNPointsOnLine(
+            v1.xpos - 100, v1.ypos,
+            v2.xpos - 100, v2.ypos,
+            numEdges
+        );
+    }
+
+    // Get negative inverse of slope as a vector
+    const rise = v2.ypos - v1.ypos;
+    const run = v2.xpos - v1.xpos;
+    const invSlopeVector = [rise, -run];
+
+    // Normalize negative inverse of slope to get unit vector
+    const unitVector = vectorDivide(
+        invSlopeVector, 
+        vectorNorm(invSlopeVector)
+    );
+
+    // Get left point by adding the unit vector to the midpoint vector,
+    // multiplied by the desired distance from the midpoint
+    const left = vectorAdd(
+        [midpoint.x, midpoint.y],
+        vectorMultiply(unitVector, distanceFromMid)
+    );
+
+    // Get right point by adding the unit vector to the midpoint vector,
+    // multiplied by the negative desired distance from the midpoint
+    const right = vectorAdd(
+        [midpoint.x, midpoint.y],
+        vectorMultiply(unitVector, -distanceFromMid)
+    )
+
+    // Get points between leftmost and rightmost points
+    return getNPointsOnLine(
+        left[0], left[1],
+        right[0], right[1],
+        numEdges
+    );
 }
 
 interface ArrowPoints {
@@ -189,6 +230,46 @@ function getPointOnLine(x1: number, y1: number,
         x: middleVector[0],
         y: middleVector[1]
     };
+}
+
+function getNPointsOnLine(x1: number, y1: number, x2: number, y2: number,
+    n: number): Point2D[] {
+    if (n < 2) {
+        throw new Error("Must have at least two points");
+    }
+
+    const totalLength = distance(x1, y1, x2, y2);
+    const sep = totalLength / (n-1);
+
+    const norm = vectorNorm([
+        x2 - x1,
+        y2 - y1
+    ]);
+
+    const unitVector = vectorDivide([
+        x2 - x1,
+        y2 - y1
+    ], norm);
+
+    const pts = new Array(n);
+    
+    for (let i = 0; i < n; i++) {
+        const pt = vectorAdd(
+            [x1, y1],
+            vectorMultiply(unitVector, i*sep)
+        );
+
+        pts[i] = {
+            x: pt[0],
+            y: pt[1]
+        };
+    }
+
+    return pts;
+}
+
+function distance(x1: number, y1: number, x2: number, y2: number): number {
+    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
 /**

@@ -10,7 +10,8 @@ import {
 } from "../../utils/graphUtils";
 import {
     VertexGraphic, EdgeGraphic, Toolbar, EditVertexMenu, EditEdgeMenu,
-    Grid
+    Grid,
+    MultiEdgeGraphic
 } from ".";
 import { getSVGPoint } from "../../utils/utils";
 import "../../style/Editor.css";
@@ -45,9 +46,6 @@ const placeholderGraph: Graph = {
     edges: edges
 };
 // End placeholder data
-
-console.log(placeholderGraph);
-console.log(getEdgeIterator(placeholderGraph));
 
 const WIDTH = 800;
 const HEIGHT = 800;
@@ -290,51 +288,77 @@ function Editor() {
         );
     });
 
-    const edges = getEdgeIterator(graph).arrayMap((_, edges) => {
-        return edges.map(e => {
-            /**
-             * Function that will be called when this edge is clicked. Changes
-             * based on the current editor mode.
-             * @param mode Current editor mode
-             * @returns An `onClick()` function that will be called when this
-             *          edge is clicked
-             */
-            function getOnClickEdge(mode: Mode): () => void {
-                switch(mode) {
-                    case "MOVE":
-                        return () => selectEdge(e.source, e.destination, 
-                            e.index);
-                    case "ERASE":
-                        // Delete this edge
-                        return () => eraseEdge(e.source, e.destination, 
-                            e.index);
-                    case "PAINT":
-                        // Set the color of this edge to the selected color
-                        return () => setGraph(
-                            changeEdgeColor(graph, e.source, e.destination, 
-                                e.index, selectedColor)
-                        );
-                    case "EYEDROP":
-                        // Set selected color to color of this edge
-                        return () => setSelectedColor(e.edge.color);
-                    default:
-                        // Do nothing otherwise
-                        return () => { return };
-                }
+    const edges = getEdgeIterator(graph).arrayMap(([v1, v2], edges) => {
+        /**
+         * Function that will be called when this edge is clicked. Changes
+         * based on the current editor mode.
+         * @param mode Current editor mode
+         * @returns An `onClick()` function that will be called when this
+         *          edge is clicked
+         */
+        function getOnClickEdge(edgeData: { source: number,
+            destination: number, edge: Edge, index: number },
+            mode: Mode): () => void {
+            switch(mode) {
+                case "MOVE":
+                    return () => selectEdge(edgeData.source,
+                        edgeData.destination, edgeData.index);
+                case "ERASE":
+                    // Delete this edge
+                    return () => eraseEdge(edgeData.source,
+                        edgeData.destination, edgeData.index);
+                case "PAINT":
+                    // Set the color of this edge to the selected color
+                    return () => setGraph(
+                        changeEdgeColor(graph, edgeData.source,
+                            edgeData.destination, edgeData.index,
+                            selectedColor)
+                    );
+                case "EYEDROP":
+                    // Set selected color to color of this edge
+                    return () => setSelectedColor(edgeData.edge.color);
+                default:
+                    // Do nothing otherwise
+                    return () => { return };
             }
+        }
+
+        if (edges.length === 0) {
+            // Ignore empty edge lists
+            return <></>
+        } else if (edges.length === 1) {
+            // If there is only one edge between v1 and v2, draw a regular edge
+            const e = edges[0];
 
             return (
                 <EdgeGraphic
-                    key={`${e.source}-${e.destination} ${e.index}`}
+                    key={`${v1}-${v2}`}
                     source={graph.vertices[e.source]}
                     destination={graph.vertices[e.destination]}
                     edge={e.edge}
                     isDirected={isDirected}
-                    onClick={getOnClickEdge(mode)}
+                    onClick={getOnClickEdge(e, mode)}
                 />
             );
-        });
-    }).flat();
+        } else {
+            // If there are many edges between v1 and v2, draw curved edges
+            const edgeData = edges.map(e => ({
+                edge: e.edge,
+                isDirectionReversed: e.source !== v1,
+                onClick: getOnClickEdge(e, mode)
+            }));
+
+            return (
+                <MultiEdgeGraphic
+                    key={`${v1}-${v2}`}
+                    v1={graph.vertices[v1]}
+                    v2={graph.vertices[v2]}
+                    edges={edgeData}
+                    isDirected={isDirected}
+                />
+            );
+        }
+    });
 
     // Set up info and editor for selected vertex/edge, if any
     let selectedElementEditor = <p>No element selected</p>;

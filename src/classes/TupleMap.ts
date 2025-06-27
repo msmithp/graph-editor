@@ -39,6 +39,14 @@ export default class TupleMap<K, V> {
         }
     }
 
+    /**
+     * Iterate through each `[key, value]` pair of the map and apply a function
+     * to `key` and `value` returning a value of type `T`, and return a new
+     * array of type `T[]`
+     * @param callback Function applied to each `[key, value]` pair
+     * @returns Array of results of applying `callback` to each `[key, value]`
+     *          pair
+     */
     arrayMap<T>(callback: (key: [K, K], value: V) => T): T[] {
         const results: T[] = [];
 
