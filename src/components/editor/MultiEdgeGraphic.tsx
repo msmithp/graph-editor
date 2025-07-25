@@ -63,6 +63,7 @@ function MultiEdgeGraphic({ v1, v2, edges,
                         points={`${arrowPts.left.x}, ${arrowPts.left.y}
                                  ${arrowPts.middle.x}, ${arrowPts.middle.y}
                                  ${arrowPts.right.x}, ${arrowPts.right.y}`}
+                        fill={edges[i].edge.color}
                     />
                 }
 

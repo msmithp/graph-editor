@@ -5,13 +5,11 @@ import {
     deleteVertexFromIndex, changeVertexLocation, createVertex,
     getSmallestLabel, deleteEdge, createEdge, changeVertexLabel,
     changeVertexColor, changeEdgeColor, changeEdgeWeight,
-    snapVerticesToGrid,
-    getEdgeIterator
+    snapVerticesToGrid, getEdgeIterator
 } from "../../utils/graphUtils";
 import {
     VertexGraphic, EdgeGraphic, Toolbar, EditVertexMenu, EditEdgeMenu,
-    Grid,
-    MultiEdgeGraphic
+    Grid, MultiEdgeGraphic
 } from ".";
 import { getSVGPoint } from "../../utils/utils";
 import "../../style/Editor.css";
@@ -20,7 +18,6 @@ import {
     SettingsMenu
 } from "./menus";
 import { complement, lineGraph } from "../../utils/graphAlgorithms";
-import IconDefs from "../svg/IconDefs";
 
 
 // Placeholder data
@@ -420,9 +417,6 @@ function Editor() {
                         onMouseMove={mode === "DRAW_EDGES" ?
                             onMouseMoveSvg : undefined}
                     >
-                        {/* Import icons for use in SVG */}
-                        <IconDefs />
-
                         {/* Display grid in background */}
                         { gridBase && isGridShown &&
                             <Grid

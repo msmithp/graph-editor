@@ -21,6 +21,11 @@ export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex,
         throw new Error("Must have at least two edges");
     }
 
+    if (v1.xpos === v2.xpos && v1.ypos === v2.ypos) {
+        // If vertices overlap, hide edges
+        return new Array(numEdges).fill({ x: v1.xpos, y: v1.ypos })
+    }
+
     // Get distance from the midpoint to the left or right
     const distanceFromMid = numEdges * 20;
 
@@ -97,6 +102,17 @@ interface ArrowPoints {
  */
 export function getDirectedEdgeArrowPoints(source: Vertex, 
     destination: Vertex): ArrowPoints {
+    if (source.xpos === destination.xpos
+        && source.ypos === destination.ypos) {
+        // Return coordinates of first point to avoid division by 0
+        const default_coords = { x: source.xpos, y: source.ypos };
+        return {
+            left: default_coords,
+            right: default_coords,
+            middle: default_coords
+        };
+    }
+
     const arrowTipPoint = getDirectedEdgeArrowTipPoint(source, destination);
     return getArrowPointsOnLine(
         { x: source.xpos, y: source.ypos },
@@ -210,6 +226,16 @@ function getArrowPointsOnLine(p1: Point2D, p2: Point2D): ArrowPoints {
  */
 export function getBezierArrowPoints(p0: Point2D, p1: Point2D,
     p2: Point2D): ArrowPoints {
+    // Hide arrow heads if start and end points overlap
+    if (p0.x === p2.x && p0.y === p2.y) {
+        const default_coords = { x: p0.x, y: p0.y };
+        return {
+            left: default_coords,
+            right: default_coords,
+            middle: default_coords
+        };
+    }
+
     const EPSILON = 0.1
 
     const B = createQuadraticBezierFunction(p0, p1, p2);
