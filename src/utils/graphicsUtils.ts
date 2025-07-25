@@ -29,12 +29,22 @@ export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex,
 
     if (v1.ypos === v2.ypos) {
         // To avoid division by 0, if the two vertices are at the same
-        // y-position, return early
-        return getNPointsOnLine(
-            v1.xpos - 100, v1.ypos,
-            v2.xpos - 100, v2.ypos,
-            numEdges
-        );
+        // y-position, return early. Switch order of midpoint y-coordinates
+        // based on the x-coordinates of the vertices to maintain correct
+        // drawing order.
+        if (v1.xpos >= v2.xpos) {
+            return getNPointsOnLine(
+                midpoint.x, midpoint.y + distanceFromMid,
+                midpoint.x, midpoint.y - distanceFromMid,
+                numEdges
+            );
+        } else {
+            return getNPointsOnLine(
+                midpoint.x, midpoint.y - distanceFromMid,
+                midpoint.x, midpoint.y + distanceFromMid,
+                numEdges
+            );
+        }
     }
 
     // Get negative inverse of slope as a vector
