@@ -1,8 +1,7 @@
-import { VERTEX_RADIUS } from "../../utils/constants";
+import {
+    ARROW_HEIGHT, ARROW_WIDTH, VERTEX_RADIUS
+} from "../../utils/constants";
 
-// Arrow head dimensions
-const ARROW_WIDTH = 15;
-const ARROW_HEIGHT = 20;
 
 function IconDefs() {
     return (

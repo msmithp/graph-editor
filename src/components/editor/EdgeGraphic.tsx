@@ -1,4 +1,5 @@
 import type { Edge, Vertex } from "../../types/Graph";
+import { EDGE_WIDTH, INVISIBLE_EDGE_WIDTH } from "../../utils/constants";
 import { getEdgeMidpoint } from "../../utils/graphicsUtils";
 
 interface EdgeProps {
@@ -24,7 +25,7 @@ function EdgeGraphic({ source, destination, edge,
                 className="edgePath"
                 d={`M ${source.xpos} ${source.ypos} 
                     L ${destination.xpos} ${destination.ypos}`}
-                strokeWidth="17"
+                strokeWidth={INVISIBLE_EDGE_WIDTH}
                 visibility="hidden"
                 pointerEvents="all"
             />
@@ -36,7 +37,7 @@ function EdgeGraphic({ source, destination, edge,
                     L ${destination.xpos} ${destination.ypos}`}
                 stroke={edge.color}
                 fill="none"
-                strokeWidth="2.5"
+                strokeWidth={EDGE_WIDTH}
                 markerEnd={ isDirected ? "url(#arrow)" : undefined}
             />
 

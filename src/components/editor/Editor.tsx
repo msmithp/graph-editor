@@ -38,9 +38,9 @@ const edges: Map<number, Edge[]>[] = Array.from(
 );
 edges[0].set(1, [{ weight: "", color: "#00FFAA" }]);
 edges[1].set(2, [{ weight: "", color: "#FF11AA" }]);
-edges[6].set(5, [{ weight: "", color: "#00FFAA" }, { weight: "", color: "#00FFAA" }]);
-edges[5].set(6, [{ weight: "", color: "#00FFAA" }]);
-edges[5].set(2, [{ weight: "", color: "#00FFAA" }]);
+edges[6].set(5, [{ weight: "", color: "#000000" }, { weight: "", color: "#000000" }]);
+edges[5].set(6, [{ weight: "", color: "#000000" }]);
+edges[5].set(2, [{ weight: "", color: "#000000" }]);
 const placeholderGraph: Graph = {
     vertices: vs,
     edges: edges
