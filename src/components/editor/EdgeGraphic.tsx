@@ -1,15 +1,20 @@
-import type { Edge } from "../../types/Graph";
-import { getDirectedEdgeArrowPoints, getEdgeMidpoint } from "../../utils/graphUtils";
+import type { Edge, Vertex } from "../../types/Graph";
+import { EDGE_WIDTH, INVISIBLE_EDGE_WIDTH } from "../../utils/constants";
+import { getDirectedEdgeArrowPoints, getEdgeMidpoint } from "../../utils/graphicsUtils";
 
 interface EdgeProps {
+    source: Vertex,
+    destination: Vertex,
     edge: Edge
     isDirected?: boolean,
     onClick: () => void
 }
 
-function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
-    const midpoint = getEdgeMidpoint(edge);
-    const arrowPoints = getDirectedEdgeArrowPoints(edge);
+function EdgeGraphic({ source, destination, edge,
+    isDirected, onClick }: EdgeProps) {
+    const midpoint = getEdgeMidpoint(source, destination);
+
+    const arrowPts = getDirectedEdgeArrowPoints(source, destination);
 
     return (
         <g 
@@ -20,36 +25,31 @@ function EdgeGraphic({ edge, isDirected, onClick }: EdgeProps) {
                 easier to click */}
             <path 
                 className="edgePath"
-                d={`M ${edge.source.xpos} ${edge.source.ypos} 
-                    L ${edge.destination.xpos} ${edge.destination.ypos}`}
-                strokeWidth="17"
+                d={`M ${source.xpos} ${source.ypos} 
+                    L ${destination.xpos} ${destination.ypos}`}
+                strokeWidth={INVISIBLE_EDGE_WIDTH}
                 visibility="hidden"
                 pointerEvents="all"
-            >
-            </path>
+            />
 
             {/* This is the actual edge */}
             <path 
                 className="edgePath"
-                d={`M ${edge.source.xpos} ${edge.source.ypos} 
-                    L ${edge.destination.xpos} ${edge.destination.ypos}`}
+                d={`M ${source.xpos} ${source.ypos} 
+                    L ${destination.xpos} ${destination.ypos}`}
                 stroke={edge.color}
-                strokeWidth="2.5"
-            >
-            </path>
+                fill="none"
+                strokeWidth={EDGE_WIDTH}
+            />
 
-            {/* Draw arrow head if edge is directed */}
-            { isDirected &&
+            {/* Display arrow head if graph is directed */}
+            { isDirected === true && 
                 <polygon
-                    className="edgePath"
-                    points={
-                        `${arrowPoints.left.x},${arrowPoints.left.y}
-                            ${arrowPoints.right.x},${arrowPoints.right.y},
-                            ${arrowPoints.middle.x}, ${arrowPoints.middle.y}`
-                    }
+                    points={`${arrowPts.left.x}, ${arrowPts.left.y}
+                             ${arrowPts.middle.x}, ${arrowPts.middle.y}
+                             ${arrowPts.right.x}, ${arrowPts.right.y}`}
                     fill={edge.color}
-                >
-                </polygon>
+                />
             }
 
             {/* Display edge weight, if any */}

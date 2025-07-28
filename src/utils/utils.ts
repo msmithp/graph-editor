@@ -73,3 +73,34 @@ export function isInteger(s: string): boolean {
 export function truncate(str: string, n: number): string {
     return str.length > n ? `${str.substring(0, n)}...` : str;
 }
+
+/**
+ * Return a list of array indices that iterate through an array starting from
+ * the outermost indices and ending at the middle
+ * @param length Length of array
+ * @returns List of indices
+ */
+export function outsideInIndices(length: number): number[] {
+    if (length <= 0) {
+        return [];
+    }
+
+    const indices = new Array(length);
+    const mid = Math.floor((length-1) / 2);
+
+    for (let i = 0; i < length; i++) {
+        // This is like a bijective mapping from the natural numbers (including
+        // 0) to the integers, offset by `mid`
+        const idx = i % 2 === 0 ? (
+            mid - Math.floor(i/2) 
+        ) : (
+            mid + Math.floor((i+1) / 2)
+        );
+
+        // Enter indices into array backwards - to go from the middle outwards,
+        // we could change the index to `i`
+        indices[length-1-i] = idx;
+    }
+
+    return indices;
+}
