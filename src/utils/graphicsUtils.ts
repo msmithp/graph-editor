@@ -502,3 +502,16 @@ function getBezierSecantPointFromT(B: (t: number) => Point2D, t: number,
     epsilon: number = 0.1): Point2D {
     return B(t - epsilon);
 }
+
+/**
+ * Get the point in the middle of a quadratic Bezier curve
+ * @param p0 Start point
+ * @param p1 Control point
+ * @param p2 End point
+ * @returns Middle point of quadratic Bezier curve
+ */
+export function getQuadraticBezierMidpoint(p0: Point2D, p1: Point2D,
+    p2: Point2D): Point2D {
+    const B = createQuadraticBezierFunction(p0, p1, p2);
+    return B(0.5);
+}

@@ -1,6 +1,9 @@
 import type { Edge, Vertex } from "../../types/Graph";
 import { EDGE_WIDTH, INVISIBLE_EDGE_WIDTH } from "../../utils/constants";
-import { getBezierArrowPoints, getMultiEdgeMidpoints } from "../../utils/graphicsUtils";
+import { 
+    getBezierArrowPoints, getMultiEdgeMidpoints
+} from "../../utils/graphicsUtils";
+import { outsideInIndices } from "../../utils/utils";
 
 interface MultiEdgeGraphicProps {
     v1: Vertex,
@@ -16,9 +19,19 @@ interface MultiEdgeGraphicProps {
 function MultiEdgeGraphic({ v1, v2, edges, 
     isDirected }: MultiEdgeGraphicProps) {
     const numEdges = edges.length;
-    const midpoints = getMultiEdgeMidpoints(v1, v2, numEdges);    
 
-    const paths = edges.map((e, i) => {
+    // Order in which edges will be drawn, corresponding to indices of the
+    // `edges` array
+    const indices = outsideInIndices(numEdges);
+
+    // Control points for Bezier curves
+    const midpoints = getMultiEdgeMidpoints(v1, v2, numEdges);
+
+    // We map using the list of indices so that the multiple edges are drawn
+    // from the outside in - ensuring that the larger outer edges do not "cover
+    // up" the smaller inner edges and prevent them from being clicked
+    const paths = indices.map(i => {
+        const e = edges[i];
         const [source, destination] = e.isDirectionReversed ?
             [v2, v1] : [v1, v2];
 

@@ -35,8 +35,11 @@ const edges: Map<number, Edge[]>[] = Array.from(
 );
 edges[0].set(1, [{ weight: "", color: "#00FFAA" }]);
 edges[1].set(2, [{ weight: "", color: "#FF11AA" }]);
-edges[6].set(5, [{ weight: "", color: "#000000" }, { weight: "", color: "#000000" }]);
-edges[5].set(6, [{ weight: "", color: "#000000" }]);
+edges[6].set(5, [{ weight: "1", color: "#000000" }, { weight: "2", color: "#000000" },
+    { weight: "3", color: "#000000" }, { weight: "4", color: "#000000" },
+    { weight: "5", color: "#000000" }, { weight: "6", color: "#000000" }]);
+edges[5].set(6, [{ weight: "7", color: "#000000" }, { weight: "8", color: "#000000" },
+    { weight: "9", color: "#000000" }, { weight: "10", color: "#000000" }]);
 edges[5].set(2, [{ weight: "", color: "#000000" }]);
 const placeholderGraph: Graph = {
     vertices: vs,
