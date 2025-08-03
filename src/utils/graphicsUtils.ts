@@ -1,6 +1,7 @@
-import type { Vertex } from "../types/Graph";
+import type { Edge, Vertex } from "../types/Graph";
 import type { Point2D } from "../types/Graphics";
-import { ARROW_WIDTH, ARROW_HEIGHT, VERTEX_RADIUS } from "./constants";
+import { ARROW_WIDTH, ARROW_HEIGHT, VERTEX_RADIUS,
+    CHAR_WIDTH, CHAR_HEIGHT } from "./constants";
 
 /**
  * Get the midpoint between two vertices
@@ -30,41 +31,49 @@ function getMidpoint(p1: Point2D, p2: Point2D): Point2D {
 
 /**
  * Given two points `p1` and `p2`, get the point 1 unit away from `p2`
- * on the line perpendicular to `p1-p2`, counterclockwise
- * @param p1 
- * @param p2 
- * @returns 
+ * on the line perpendicular to `p1-p2`
+ * @param p1 First point
+ * @param p2 Second point
+ * @param counterclockwise `true` if the new point faces counterclockwise,
+ *                         `false` otherwise
+ * @returns New point that is 1 unit away from `p2` on the line perpendicular
+ *          to `p1-p2` in the direction specified by `clockwise`
  */
-export function getPerpendicularPoint(p1: Point2D, p2: Point2D): Point2D {
+export function getPerpendicularPoint(p1: Point2D, p2: Point2D,
+    counterclockwise: boolean = true): Point2D {
     // Handle cases where `p1` and `p2` have the same x- or y-coordinates
     // separately to avoid division by zero
     if (p1.x === p2.x && p1.y === p2.y) {
         return p1;
     }
 
-    if (p1.x === p2.x) {
-        if (p1.y > p2.y) {
-            return {
-                x: p2.x - 1,
-                y: p2.y
-            };
-        } else {
-            return {
-                x: p2.x + 1,
-                y: p2.y
-            };
+    if (counterclockwise) {
+        if (p1.x === p2.x) {
+            if (p1.y > p2.y) {
+                return { x: p2.x - 1, y: p2.y };
+            } else {
+                return { x: p2.x + 1, y: p2.y };
+            }
+        } else if (p1.y === p2.y) {
+            if (p1.x > p2.x) {
+                return { x: p2.x, y: p2.y + 1 };
+            } else {
+                return { x: p2.x, y: p2.y - 1 };
+            }
         }
-    } else if (p1.y === p2.y) {
-        if (p1.x > p2.x) {
-            return {
-                x: p2.x,
-                y: p2.y + 1
-            };
-        } else {
-            return {
-                x: p2.x,
-                y: p2.y - 1
-            };
+    } else {
+        if (p1.x === p2.x) {
+            if (p1.y > p2.y) {
+                return { x: p2.x + 1, y: p2.y };
+            } else {
+                return { x: p2.x - 1, y: p2.y };
+            }
+        } else if (p1.y === p2.y) {
+            if (p1.x > p2.x) {
+                return { x: p2.x, y: p2.y - 1 };
+            } else {
+                return { x: p2.x, y: p2.y + 1 };
+            }
         }
     }
 
@@ -80,8 +89,11 @@ export function getPerpendicularPoint(p1: Point2D, p2: Point2D): Point2D {
     );
 
     // Get vector corresponding to point 1 unit away from `p2` on a
-    // perpendicular line, counterclockwise
-    const perpendicular = vectorAdd([p2.x, p2.y], unitVector);
+    // perpendicular line
+    const perpendicular = vectorAdd(
+        [p2.x, p2.y],
+        counterclockwise ? unitVector : vectorMultiply(unitVector, -1)
+    );
 
     return {
         x: perpendicular[0],
@@ -97,7 +109,8 @@ export function getPerpendicularPoint(p1: Point2D, p2: Point2D): Point2D {
  * @returns Array of control points
  */
 export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex, 
-    numEdges: number): Point2D[] {
+    edges: Edge[]): Point2D[] {
+    const numEdges = edges.length;
     if (numEdges < 2) {
         throw new Error("Must have at least two edges");
     }
@@ -107,8 +120,19 @@ export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex,
         return new Array(numEdges).fill({ x: v1.xpos, y: v1.ypos })
     }
 
+    // Get length of longest weight string
+    const maxLength = Math.max(...(edges.map(e => e.weight.length)));
+
     // Get distance from the midpoint to the left or right
-    const distanceFromMid = numEdges * 20;
+    const SPACING_WIDTH = 12
+    const MIN_SPACING = 2
+    const distanceFromMid = numEdges > 2 ? (
+        numEdges * SPACING_WIDTH * Math.max(MIN_SPACING, maxLength)
+    ) : (
+        // If only two edges are present, no need to worry about making things
+        // proportional with text lengths
+        numEdges * SPACING_WIDTH * MIN_SPACING
+    );
 
     // Start by getting midpoint between the two vertices
     const midpoint = getEdgeMidpoint(v1, v2);
@@ -626,10 +650,6 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
         return p1;
     }
 
-    // Rough width and height of characters in this font
-    const CHAR_WIDTH = 8.5;
-    const CHAR_HEIGHT = 5;
-
     // Rough width of edge weight text object
     const textWidth = weight.length * CHAR_WIDTH;
 
@@ -702,4 +722,62 @@ function angleBetweenPoints(p1: Point2D, p2: Point2D): number {
     } else {
         return theta;
     }
+}
+
+/**
+ * Get the points at which all edges' weights should be drawn between two
+ * vertices
+ * @param v1 First vertex
+ * @param v2 Second vertex
+ * @param weights Weight labels
+ * @param controlPts Bezier curve control points
+ * @returns Array of points at which edge weights should be drawn
+ */
+export function getMultiEdgeWeightLocations(v1: Vertex, v2: Vertex,
+    weights: string[], controlPts: Point2D[]): Point2D[] {
+    return getMultiEdgeWeightLocationsFromPoints(
+        { x: v1.xpos, y: v1.ypos },
+        { x: v2.xpos, y: v2.ypos },
+        weights,
+        controlPts
+    );
+}
+
+/**
+ * Get the points at which all edges' weights should be drawn between two
+ * points
+ * @param p1 First point
+ * @param p2 Second point
+ * @param weights Weight labels
+ * @param controlPts Bezier curve control points
+ * @returns Array of points at which edge weights should be drawn
+ */
+function getMultiEdgeWeightLocationsFromPoints(p1: Point2D, p2: Point2D,
+    weights: string[], controlPts: Point2D[]): Point2D[] {
+    const numEdges = controlPts.length;
+
+    if (numEdges < 2) {
+        throw new Error("Must have at least two edges");
+    }
+
+    const EPSILON = 0.01;
+    const weightPts = new Array(numEdges);
+
+    // Weights for first half of points, inclusive, are drawn counterclockwise
+    for (let i = 0; i < Math.ceil(numEdges / 2); i++) {
+        const B = createQuadraticBezierFunction(p1, controlPts[i], p2);
+        const firstPt = B(0.5 - EPSILON);
+        const secondPt = B(0.5 + EPSILON);
+        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt, secondPt, weights[i]);
+    }
+
+    // Weights for second half of points are drawn clockwise
+    for (let i = Math.ceil(numEdges / 2); i < numEdges; i++) {
+        const B = createQuadraticBezierFunction(p1, controlPts[i], p2);
+        const firstPt = B(0.5 + EPSILON);
+        const secondPt = B(0.5 - EPSILON);
+        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt, secondPt, weights[i]);
+    }
+
+    return weightPts;
 }

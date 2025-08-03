@@ -1,7 +1,8 @@
 import type { Edge, Vertex } from "../../types/Graph";
 import { EDGE_WIDTH, INVISIBLE_EDGE_WIDTH } from "../../utils/constants";
 import { 
-    getBezierArrowPoints, getMultiEdgeMidpoints
+    getBezierArrowPoints, getMultiEdgeMidpoints,
+    getMultiEdgeWeightLocations
 } from "../../utils/graphicsUtils";
 import { outsideInIndices } from "../../utils/utils";
 
@@ -24,8 +25,14 @@ function MultiEdgeGraphic({ v1, v2, edges,
     // `edges` array
     const indices = outsideInIndices(numEdges);
 
+    // Weights of edges, as strings
+    const weights = edges.map(e => e.edge.weight);
+
     // Control points for Bezier curves
-    const midpoints = getMultiEdgeMidpoints(v1, v2, numEdges);
+    const midpoints = getMultiEdgeMidpoints(v1, v2, edges.map(e => e.edge));
+
+    // Points where each edge weight will be drawn
+    const weightPts = getMultiEdgeWeightLocations(v1, v2, weights, midpoints);
 
     // We map using the list of indices so that the multiple edges are drawn
     // from the outside in - ensuring that the larger outer edges do not "cover
@@ -85,8 +92,8 @@ function MultiEdgeGraphic({ v1, v2, edges,
                     <g className="edgeWeight">
                         <text
                             className="edgeWeight"
-                            x={midpoints[i].x}
-                            y={midpoints[i].y}
+                            x={weightPts[i].x}
+                            y={weightPts[i].y}
                             style={{ userSelect: "none", textAnchor: "middle" }}
                         >
                             {e.edge.weight}
