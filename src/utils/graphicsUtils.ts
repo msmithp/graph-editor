@@ -627,16 +627,27 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
     }
 
     // Rough width and height of characters in this font
-    const CHAR_WIDTH = 9;
+    const CHAR_WIDTH = 8.5;
     const CHAR_HEIGHT = 5;
 
     // Rough width of edge weight text object
-    const width = weight.length * CHAR_WIDTH;
+    const textWidth = weight.length * CHAR_WIDTH;
 
     // Padding added between edge weight and edge line
-    const PADDING = 5;
+    const PADDING = 10;
 
-    const dist = width / 2;
+    // Using the angle between p1 and p2, get a constant `c` between 0 and 1
+    // such that c = 0 when p1 and p2 are at the same y-value and c = 1 when
+    // p1 and p2 are at the same x-value. This ensures that no distance is
+    // placed between the text and the edge when the edge line is horizontal,
+    // and maximum distance is placed between the text and the edge when the
+    // edge line is vertical.
+    const theta = radiansToDegrees(angleBetweenPoints(p1, p2));
+    const c = Math.sin(degreesToRadians(theta % 180));
+
+    // Distance away from the edge that the text should be
+    const dist = (textWidth / 2) * c;
+
     const midpoint = getMidpoint(p1, p2);
     const perpendicularPoint = getPerpendicularPoint(p1, midpoint);
     
@@ -651,4 +662,44 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
     weightPt.y += CHAR_HEIGHT;
 
     return weightPt;
+}
+
+/**
+ * Convert radians to degrees
+ * @param radians Radian value
+ * @returns Equivalent value in degrees
+ */
+function radiansToDegrees(radians: number): number {
+    return radians * (180 / Math.PI);
+}
+
+/**
+ * Convert degreres to radians
+ * @param degrees Degree value
+ * @returns Equivalent value in radians
+ */
+function degreesToRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+}
+
+/**
+ * Given two points `(x1, y1)` and `(x2, y2)`, return the angle between the
+ * line `y = y1` and the point `(x2, y2)`, in radians
+ * @param p1 First point `(x1, y1)`
+ * @param p2 Second point `(x2, y2)`
+ * @returns Angle between `p1` and `p2`
+ */
+function angleBetweenPoints(p1: Point2D, p2: Point2D): number {
+    const x = p2.x - p1.x;
+    // Subtract p2.y from p1.y since y value increases as point gets lower,
+    // not higher
+    const y = p1.y - p2.y;
+    const theta = Math.atan2(y, x);
+
+    if (theta < 0) {
+        // Convert negative angle to value between 0 and 2 * pi
+        return 2 * Math.PI + theta;
+    } else {
+        return theta;
+    }
 }
