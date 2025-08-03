@@ -1,6 +1,9 @@
 import type { Edge, Vertex } from "../../types/Graph";
 import { EDGE_WIDTH, INVISIBLE_EDGE_WIDTH } from "../../utils/constants";
-import { getDirectedEdgeArrowPoints, getEdgeMidpoint } from "../../utils/graphicsUtils";
+import {
+    getDirectedEdgeArrowPoints,
+    getEdgeWeightLocation
+} from "../../utils/graphicsUtils";
 
 interface EdgeProps {
     source: Vertex,
@@ -12,7 +15,7 @@ interface EdgeProps {
 
 function EdgeGraphic({ source, destination, edge,
     isDirected, onClick }: EdgeProps) {
-    const midpoint = getEdgeMidpoint(source, destination);
+    const weightPt = getEdgeWeightLocation(source, destination, edge.weight);
 
     const arrowPts = getDirectedEdgeArrowPoints(source, destination);
 
@@ -54,14 +57,16 @@ function EdgeGraphic({ source, destination, edge,
 
             {/* Display edge weight, if any */}
             { edge.weight !== "" &&
-                <text
-                    className="edgeWeight"
-                    x={midpoint.x}
-                    y={midpoint.y}
-                    style={{ userSelect: "none" }}
-                >
-                    {edge.weight}
-                </text>
+                <g className="edgeWeight">
+                    <text
+                        className="edgeWeight"
+                        x={weightPt.x}
+                        y={weightPt.y}
+                        style={{ userSelect: "none", textAnchor: "middle" }}
+                    >
+                        {edge.weight}
+                    </text>
+                </g>
             }
         </g>
     )

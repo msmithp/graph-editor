@@ -82,14 +82,16 @@ function MultiEdgeGraphic({ v1, v2, edges,
 
                 {/* Display edge weight, if any */}
                 { e.edge.weight !== "" &&
-                    <text
-                        className="edgeWeight"
-                        x={midpoints[i].x}
-                        y={midpoints[i].y}
-                        style={{ userSelect: "none" }}
-                    >
-                        {e.edge.weight}
-                    </text>
+                    <g className="edgeWeight">
+                        <text
+                            className="edgeWeight"
+                            x={midpoints[i].x}
+                            y={midpoints[i].y}
+                            style={{ userSelect: "none", textAnchor: "middle" }}
+                        >
+                            {e.edge.weight}
+                        </text>
+                    </g>
                 }
             </g>
         );

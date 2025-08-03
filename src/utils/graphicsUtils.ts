@@ -9,12 +9,93 @@ import { ARROW_WIDTH, ARROW_HEIGHT, VERTEX_RADIUS } from "./constants";
  * @returns Midpoint between `v1` and `v2` as x- and y-coordinates
  */
 export function getEdgeMidpoint(v1: Vertex, v2: Vertex): Point2D {
+    return getMidpoint(
+        { x: v1.xpos, y: v1.ypos },
+        { x: v2.xpos, y: v2.ypos }
+    );
+}
+
+/**
+ * Get the midpoint between two points
+ * @param p1 First point
+ * @param p2 Second point
+ * @returns Midpoint between `p1` and `p2`
+ */
+function getMidpoint(p1: Point2D, p2: Point2D): Point2D {
     return {
-        x: (v1.xpos + v2.xpos) / 2,
-        y: (v1.ypos + v2.ypos) / 2
+        x: (p1.x + p2.x) / 2,
+        y: (p1.y + p2.y) / 2
     };
 }
 
+/**
+ * Given two points `p1` and `p2`, get the point 1 unit away from `p2`
+ * on the line perpendicular to `p1-p2`, counterclockwise
+ * @param p1 
+ * @param p2 
+ * @returns 
+ */
+export function getPerpendicularPoint(p1: Point2D, p2: Point2D): Point2D {
+    // Handle cases where `p1` and `p2` have the same x- or y-coordinates
+    // separately to avoid division by zero
+    if (p1.x === p2.x && p1.y === p2.y) {
+        return p1;
+    }
+
+    if (p1.x === p2.x) {
+        if (p1.y > p2.y) {
+            return {
+                x: p2.x - 1,
+                y: p2.y
+            };
+        } else {
+            return {
+                x: p2.x + 1,
+                y: p2.y
+            };
+        }
+    } else if (p1.y === p2.y) {
+        if (p1.x > p2.x) {
+            return {
+                x: p2.x,
+                y: p2.y + 1
+            };
+        } else {
+            return {
+                x: p2.x,
+                y: p2.y - 1
+            };
+        }
+    }
+
+    // Get negative inverse of slope as a vector
+    const rise = p2.y - p1.y;
+    const run = p2.x - p1.x;
+    const invSlopeVector = [rise, -run];
+
+    // Normalize negative inverse of slope to get unit vector
+    const unitVector = vectorDivide(
+        invSlopeVector, 
+        vectorNorm(invSlopeVector)
+    );
+
+    // Get vector corresponding to point 1 unit away from `p2` on a
+    // perpendicular line, counterclockwise
+    const perpendicular = vectorAdd([p2.x, p2.y], unitVector);
+
+    return {
+        x: perpendicular[0],
+        y: perpendicular[1]
+    }
+}
+
+/**
+ * Get an array of control points for Bezier curves between two vertices
+ * @param v1 Source vertex
+ * @param v2 Destination vertex
+ * @param numEdges Number of edges between `v1` and `v2`
+ * @returns Array of control points
+ */
 export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex, 
     numEdges: number): Point2D[] {
     if (numEdges < 2) {
@@ -75,7 +156,7 @@ export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex,
     const right = vectorAdd(
         [midpoint.x, midpoint.y],
         vectorMultiply(unitVector, -distanceFromMid)
-    )
+    );
 
     // Get points between leftmost and rightmost points
     return getNPointsOnLine(
@@ -514,4 +595,60 @@ export function getQuadraticBezierMidpoint(p0: Point2D, p1: Point2D,
     p2: Point2D): Point2D {
     const B = createQuadraticBezierFunction(p0, p1, p2);
     return B(0.5);
+}
+
+/**
+ * Get the point at which an edge's weight should be drawn
+ * @param source Source vertex
+ * @param destination Destination vertex
+ * @param weight Edge weight
+ * @returns Point where edge weight text should be drawn
+ */
+export function getEdgeWeightLocation(source: Vertex,
+    destination: Vertex, weight: string): Point2D {
+    return getEdgeWeightLocationFromPoints(
+        { x: source.xpos, y: source.ypos },
+        { x: destination.xpos, y: destination.ypos },
+        weight
+    );
+}
+
+/**
+ * Get the point at which an edge's weight should be drawn, given two points
+ * @param p1 First point
+ * @param p2 Second point
+ * @param weight Edge weight
+ * @returns Point where edge weight text should be drawn
+ */
+function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
+    weight: string): Point2D {
+    if (p1.x === p2.x && p1.y === p2.y) {
+        return p1;
+    }
+
+    // Rough width and height of characters in this font
+    const CHAR_WIDTH = 9;
+    const CHAR_HEIGHT = 5;
+
+    // Rough width of edge weight text object
+    const width = weight.length * CHAR_WIDTH;
+
+    // Padding added between edge weight and edge line
+    const PADDING = 5;
+
+    const dist = width / 2;
+    const midpoint = getMidpoint(p1, p2);
+    const perpendicularPoint = getPerpendicularPoint(p1, midpoint);
+    
+    const weightPt = getPointOnLine(
+        midpoint.x, midpoint.y,
+        perpendicularPoint.x, perpendicularPoint.y,
+        dist + PADDING
+    );
+
+    // Vertical offset to account for the fact that the "anchor" of the text
+    // object is at the bottom of the text rather than the middle
+    weightPt.y += CHAR_HEIGHT;
+
+    return weightPt;
 }

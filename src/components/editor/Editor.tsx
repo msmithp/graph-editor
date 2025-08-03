@@ -33,8 +33,8 @@ for (let i = 0; i < 10; i++) {
 const edges: Map<number, Edge[]>[] = Array.from(
     { length: vs.length }, () => new Map()
 );
-edges[0].set(1, [{ weight: "", color: "#00FFAA" }]);
-edges[1].set(2, [{ weight: "", color: "#FF11AA" }]);
+edges[0].set(1, [{ weight: "abcde", color: "#00FFAA" }]);
+edges[1].set(2, [{ weight: "10", color: "#FF11AA" }]);
 edges[6].set(5, [{ weight: "1", color: "#000000" }, { weight: "2", color: "#000000" },
     { weight: "3", color: "#000000" }, { weight: "4", color: "#000000" },
     { weight: "5", color: "#000000" }, { weight: "6", color: "#000000" }]);
