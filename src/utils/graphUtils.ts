@@ -439,10 +439,9 @@ type EdgeIterator = TupleMap<
  * both corresponding to the key `(v1, v2)` (assuming the index of `v1` is less
  * than that of `v2`).
  * 
- * In order to preserve directional information, the
- * indices of the source and destination vertices are stored with each list
- * item. To enable interactivity, the index of each edge in the original graph
- * is also stored.
+ * In order to preserve directional information, the indices of the source and
+ * destination vertices are stored with each list item. To enable
+ * interactivity, the index of each edge in the original graph is also stored.
  * @param graph Graph whose edges will be formatted into an iterator
  * @returns Map of edges in the format `[(v1, v2), edges]` for all vertices 
  *          `v1` and `v2` such that `v1` and `v2` have at least one edge
@@ -482,4 +481,51 @@ export function getEdgeIterator(graph: Graph): EdgeIterator {
     }
 
     return iterator;
+}
+
+/**
+ * Given a graph that represents each adjacency only once, create another
+ * graph that represents each adjacency twice. That is, for each pair of
+ * adjacent vertices `(u, v)`, the edges `uv` and `vu` are included in the
+ * created graph.
+ * 
+ * @param graph Graph
+ * @returns Graph with each adjacency represented twice
+ */
+export function createDoubleAdjacencyGraph(graph: Graph): Graph {
+    const newVertices = structuredClone(graph.vertices);
+    const newEdges: Map<number, Edge[]>[] = Array.from(
+        { length: newVertices.length }, () => new Map()
+    );
+
+    for (let i = 0; i < graph.edges.length; i++) {
+        const outgoingEdges = graph.edges[i];
+
+        for (const [j, edges] of outgoingEdges.entries()) {
+            // Get existing edges, if any
+            const ijEdges = newEdges[i].get(j);
+            const jiEdges = newEdges[j].get(i);
+
+            if (ijEdges === undefined) {
+                // No ij edges exist yet, so make a new entry
+                newEdges[i].set(j, edges);
+            } else {
+                // Append new edges to existing ij edges
+                newEdges[i].set(j, [...ijEdges, ...edges]);
+            }
+
+            if (jiEdges === undefined) {
+                // No ji edges exist yet, so make a new entry
+                newEdges[j].set(i, edges);
+            } else {
+                // Append new edges to existing ji edges
+                newEdges[j].set(i, [...jiEdges, ...edges]);
+            }
+        }
+    }
+
+    return {
+        vertices: newVertices,
+        edges: newEdges
+    };
 }

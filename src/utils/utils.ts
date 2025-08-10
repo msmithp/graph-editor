@@ -1,3 +1,5 @@
+import type { Point2D } from "../types/Graphics";
+
 /**
  * Convert a string to title case, that is, the first letter of each word
  * is capitalized.
@@ -28,13 +30,30 @@ export function roundToBase(x: number, base: number): number {
     return Math.round(x / base) * base;
 }
 
+/**
+ * Force a value between `min` and `max`. That is,
+ * * If `value` is lower than `min`, return `min`
+ * * If `value` is greater than `max`, return `max`
+ * * Otherwise, return `value`
+ * 
+ * @param value Value to be squeezed
+ * @param min High end of range
+ * @param max Low end of range
+ * @returns Squeezed value
+ */
 export function squeeze(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
 }
 
-export function getSVGPoint(svg: SVGSVGElement, x: number, y: number): 
-    {x: number, y: number} {
-    // Convert client coordinates to SVG coordinates
+/**
+ * Convert SVG coordinates to client coordinates
+ * @param svg SVG element
+ * @param x SVG x-coordinate
+ * @param y SVG y-coordinate
+ * @returns Client coordinates
+ */
+export function getSVGPoint(svg: SVGSVGElement, x: number,
+    y: number): Point2D {
     const invCTM = svg.getScreenCTM()!.inverse();
     const pt = svg.createSVGPoint();
     pt.x = x;
@@ -103,4 +122,86 @@ export function outsideInIndices(length: number): number[] {
     }
 
     return indices;
+}
+
+/**
+ * Check if any values exist in `nums` within the range `low`-`high`, inclusive
+ * 
+ * @param nums List of numbers
+ * @param low Low end of range
+ * @param high High end of range
+ * @returns `true` if `nums` contains any element between `low` and `high`,
+ *          `false` otherwise
+ */
+export function binaryRangeSearch(nums: number[], low: number,
+    high: number): boolean {
+    // Binary search for number between low and high
+    const idx = binarySearch(nums, (low + high) / 2, compareNumbers);
+
+    if (idx >= 0) {
+        // Positive index means the exact number between low and high is in the
+        // list, which is obviously between low and high
+        return true;
+    }
+
+    const wouldBeIdx = (idx + 1) * -1;
+    
+    if (wouldBeIdx === 0) {
+        return nums[0] <= high;
+    }
+
+    if (nums[wouldBeIdx-1] >= low || nums[wouldBeIdx] <= high) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Perform a binary search to find the index of an element in a sorted array.
+ * Based on Alexander Ryzhov's answer: https://stackoverflow.com/a/29018745
+ * 
+ * @param nums Sorted array
+ * @param key Element being searched for
+ * @param compare Comparison function for elements of array
+ * @returns If `key` is found, then the index of `key` is returned. Otherwise,
+ *          for the index `i` at which `key` would have been, `-i - 1` will be
+ *          returned.
+ */
+export function binarySearch<T>(arr: T[], key: T,
+    compare: (a: T, b: T) => number): number {
+    let lo = 0;
+    let hi = arr.length - 1;
+
+    while (lo <= hi) {
+        let mid = Math.floor((lo + hi) / 2);
+        let cmp = compare(key, arr[mid]);
+
+        if (cmp > 0) {
+            // Key is greater than element at mid
+            lo = mid + 1;
+        } else if (cmp < 0) {
+            // Key is less than element at mid
+            hi = mid - 1;
+        } else {
+            // Key found
+            return mid;
+        }
+    }
+
+    return -lo - 1;
+}
+
+/**
+ * Compare two numbers
+ * 
+ * @param num1 First number
+ * @param num2 Second number
+ * @returns The difference between `num1` and `num2`. That is,
+ *          * A positive number, if `num1 > num2`
+ *          * A negative number, if `num1 < num2`
+ *          * 0, if `num1 == num2`
+ */
+function compareNumbers(num1: number, num2: number): number {
+    return num1 - num2;
 }

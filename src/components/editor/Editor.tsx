@@ -21,30 +21,30 @@ import { complement, lineGraph } from "../../utils/graphAlgorithms";
 
 
 // Placeholder data
-const vs = [];
-for (let i = 0; i < 10; i++) {
-    vs.push({
-        label: `${i}`,
-        xpos: Math.random() * 800,
-        ypos: Math.random() * 800,
-        color: "#FFFFFF"
-    });
-}
-const edges: Map<number, Edge[]>[] = Array.from(
-    { length: vs.length }, () => new Map()
-);
-edges[0].set(1, [{ weight: "abcde", color: "#00FFAA" }]);
-edges[1].set(2, [{ weight: "10", color: "#FF11AA" }]);
-edges[6].set(5, [{ weight: "1", color: "#000000" }, { weight: "2", color: "#000000" },
-    { weight: "3", color: "#000000" }, { weight: "4", color: "#000000" },
-    { weight: "5", color: "#000000" }, { weight: "6", color: "#000000" }]);
-edges[5].set(6, [{ weight: "7", color: "#000000" }, { weight: "8", color: "#000000" },
-    { weight: "9", color: "#000000" }, { weight: "10", color: "#000000" }]);
-edges[5].set(2, [{ weight: "", color: "#000000" }]);
-const placeholderGraph: Graph = {
-    vertices: vs,
-    edges: edges
-};
+// const vs = [];
+// for (let i = 0; i < 10; i++) {
+//     vs.push({
+//         label: `${i}`,
+//         xpos: Math.random() * 800,
+//         ypos: Math.random() * 800,
+//         color: "#FFFFFF"
+//     });
+// }
+// const edges: Map<number, Edge[]>[] = Array.from(
+//     { length: vs.length }, () => new Map()
+// );
+// edges[0].set(1, [{ weight: "abcde", color: "#00FFAA" }]);
+// edges[1].set(2, [{ weight: "10", color: "#FF11AA" }]);
+// edges[6].set(5, [{ weight: "1", color: "#000000" }, { weight: "2", color: "#000000" },
+//     { weight: "3", color: "#000000" }, { weight: "4", color: "#000000" },
+//     { weight: "5", color: "#000000" }, { weight: "6", color: "#000000" }]);
+// edges[5].set(6, [{ weight: "7", color: "#000000" }, { weight: "8", color: "#000000" },
+//     { weight: "9", color: "#000000" }, { weight: "10", color: "#000000" }]);
+// edges[5].set(2, [{ weight: "", color: "#000000" }]);
+// const placeholderGraph: Graph = {
+//     vertices: vs,
+//     edges: edges
+// };
 // End placeholder data
 
 const WIDTH = 800;
@@ -52,13 +52,10 @@ const HEIGHT = 800;
 
 
 function Editor() {
-    const [graph, setGraph] = useState<Graph>(
-        // {
-        //     vertices: [],
-        //     edges: []
-        // }
-        placeholderGraph
-    );
+    const [graph, setGraph] = useState<Graph>({
+        vertices: [],
+        edges: []
+    });
     const [mode, setMode] = useState<Mode>("MOVE");
     const [mousePos, setMousePos] = 
         useState<{x: number, y: number}>({ x: 0, y: 0 });
@@ -502,7 +499,7 @@ function Editor() {
                         onLineGraph={() => {
                             setSelectedVertex(null);
                             setSelectedEdge(null);
-                            setGraph(lineGraph(graph));
+                            setGraph(lineGraph(graph, isDirected));
                         }}
                         onComplement={() => {
                             setSelectedVertex(null);

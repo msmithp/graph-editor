@@ -1,7 +1,9 @@
-import type { Edge, Vertex } from "../types/Graph";
+import type { Edge, Graph, Vertex } from "../types/Graph";
 import type { Point2D } from "../types/Graphics";
 import { ARROW_WIDTH, ARROW_HEIGHT, VERTEX_RADIUS,
     CHAR_WIDTH, CHAR_HEIGHT } from "./constants";
+import { createDoubleAdjacencyGraph } from "./graphUtils";
+import { binaryRangeSearch } from "./utils";
 
 /**
  * Get the midpoint between two vertices
@@ -679,7 +681,7 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
 
     // Vertical offset to account for the fact that the "anchor" of the text
     // object is at the bottom of the text rather than the middle
-    weightPt.y += CHAR_HEIGHT;
+    weightPt.y += CHAR_HEIGHT/2;
 
     return weightPt;
 }
@@ -719,6 +721,8 @@ function angleBetweenPoints(p1: Point2D, p2: Point2D): number {
     if (theta < 0) {
         // Convert negative angle to value between 0 and 2 * pi
         return 2 * Math.PI + theta;
+        //                 ↑
+        //     plus, since theta is negative
     } else {
         return theta;
     }
@@ -768,7 +772,8 @@ function getMultiEdgeWeightLocationsFromPoints(p1: Point2D, p2: Point2D,
         const B = createQuadraticBezierFunction(p1, controlPts[i], p2);
         const firstPt = B(0.5 - EPSILON);
         const secondPt = B(0.5 + EPSILON);
-        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt, secondPt, weights[i]);
+        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt,
+            secondPt, weights[i]);
     }
 
     // Weights for second half of points are drawn clockwise
@@ -776,8 +781,141 @@ function getMultiEdgeWeightLocationsFromPoints(p1: Point2D, p2: Point2D,
         const B = createQuadraticBezierFunction(p1, controlPts[i], p2);
         const firstPt = B(0.5 + EPSILON);
         const secondPt = B(0.5 - EPSILON);
-        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt, secondPt, weights[i]);
+        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt,
+            secondPt, weights[i]);
     }
 
     return weightPts;
+}
+
+export function getVertexLabelPlacementAngles(graph: Graph): number[] {
+    // Get angles of all incoming and outgoing edges of vertices, sorted in
+    // ascending order
+    const edgeAngles = getVertexEdgeAngles(graph).map(arr => arr.sort());
+
+    const labelAngles = edgeAngles.map(angleList => {
+        const DIFF = (7 * Math.PI) / 36;  // 35 degrees
+
+        // Try top first
+        const TOP = 0.5 * Math.PI;
+        if (!binaryRangeSearch(angleList, TOP - DIFF, TOP + DIFF)) {
+            return TOP;
+        }
+
+        // Then try bottom
+        const BOTTOM = 1.5 * Math.PI;
+        if (!binaryRangeSearch(angleList, BOTTOM - DIFF, BOTTOM + DIFF)) {
+            return BOTTOM;
+        }
+
+        // Then try left
+        const LEFT = Math.PI;
+        if (!binaryRangeSearch(angleList, LEFT - DIFF, LEFT + DIFF)) {
+            return LEFT;
+        }
+
+        // Finally, try right (two separate searches are necessary because
+        // angles are in modulo 2pi)
+        const RIGHT = 0;
+        const RIGHT_FULL = 2 * Math.PI;
+        if (!binaryRangeSearch(angleList, RIGHT_FULL - DIFF, RIGHT_FULL)
+            && !binaryRangeSearch(angleList, RIGHT, RIGHT + DIFF)) {
+            return RIGHT;
+        }
+
+        // All sides taken - find the angle furthest from the angles of all
+        // incident edges
+        let maxDiff = 0;
+        let maxDiffIdx = 0;
+        for (let i = 0; i < angleList.length - 1; i++) {
+            const elem1 = angleList[i];
+            const elem2 = angleList[i+1];
+            const diff = elem2 - elem1;
+
+            if (diff > maxDiff) {
+                maxDiff = diff;
+                maxDiffIdx = i;
+            }
+        }
+
+        // Check difference between last and first element, in modulo 2pi
+        const first = angleList[0] + 2 * Math.PI;
+        const last = angleList[angleList.length - 1];
+        if (first - last > maxDiff) {
+            maxDiff = first - last;
+            maxDiffIdx = angleList.length - 1;
+        }
+
+        // Return angle in between the two angles with the maximum difference
+        return (angleList[maxDiffIdx] + maxDiff/2) % (2 * Math.PI);
+    });
+
+    return labelAngles;
+}
+
+/**
+ * For each vertex `v` of a graph, generate a list of angles between each
+ * edge incident with `v` and the line `y = v.ypos`
+ * 
+ * @param graph Graph
+ * @returns List of angles for each vertex of `graph`
+ */
+function getVertexEdgeAngles(graph: Graph): number[][] {
+    // Create double-adjacency graph in order to view all edges incident with
+    // a given vertex in constant time
+    const doubleAdjacencyGraph = createDoubleAdjacencyGraph(graph);
+    const allAngles: number[][] = new Array(
+        doubleAdjacencyGraph.vertices.length
+    );
+
+    for (let i = 0; i < doubleAdjacencyGraph.vertices.length; i++) {
+        const p1 = {
+            x: doubleAdjacencyGraph.vertices[i].xpos,
+            y: doubleAdjacencyGraph.vertices[i].ypos
+        };
+        let angles = [];
+
+        for (const [j, edges] of doubleAdjacencyGraph.edges[i].entries()) {
+            const p2 = {
+                x: doubleAdjacencyGraph.vertices[j].xpos,
+                y: doubleAdjacencyGraph.vertices[j].ypos
+            };
+
+            if (edges.length === 0) {
+                // No ij edges - ignore
+                continue;
+            } else if (edges.length === 1) {
+                // One ij edge - get simple angle between points
+                angles.push(angleBetweenPoints(p1, p2));
+            } else {
+                // Many ij edges - calculate approximate angles of Bezier
+                // curves as they exit the vertex. First, get control points
+                // between p1 and p2
+                const controlPts = getMultiEdgeMidpoints(
+                    doubleAdjacencyGraph.vertices[i],
+                    doubleAdjacencyGraph.vertices[j],
+                    edges
+                );
+
+                angles.push(...controlPts.map(c => {
+                    // Create Bezier functions for each edge
+                    const B = createQuadraticBezierFunction(p1, c, p2);
+
+                    // Calculate approximate `t` value for which the Bezier
+                    // function is VERTEX_RADIUS units away from p1
+                    const t = getTFromPoint(B, p1, VERTEX_RADIUS, 0.1);
+
+                    // Get point at B(t)
+                    const intersectionPt = B(t);
+
+                    // Finally, calculate angle between p1 and B(t)
+                    return angleBetweenPoints(p1, intersectionPt);
+                }));
+            }
+        }
+
+        allAngles[i] = angles;
+    }
+
+    return allAngles;
 }
