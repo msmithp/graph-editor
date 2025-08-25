@@ -18,6 +18,10 @@ import {
     SettingsMenu
 } from "./menus";
 import { complement, lineGraph } from "../../utils/graphAlgorithms";
+import type { Point2D } from "../../types/Graphics";
+import { toTikz } from "../../utils/ioUtils";
+import type { TikzExportSettings } from "../../types/IO";
+import { HEIGHT, WIDTH } from "../../utils/constants";
 
 
 // Placeholder data
@@ -47,18 +51,13 @@ import { complement, lineGraph } from "../../utils/graphAlgorithms";
 // };
 // End placeholder data
 
-const WIDTH = 800;
-const HEIGHT = 800;
-
-
 function Editor() {
     const [graph, setGraph] = useState<Graph>({
         vertices: [],
         edges: []
     });
     const [mode, setMode] = useState<Mode>("MOVE");
-    const [mousePos, setMousePos] = 
-        useState<{x: number, y: number}>({ x: 0, y: 0 });
+    const [mousePos, setMousePos] = useState<Point2D>({ x: 0, y: 0 });
     const [fromVertex, setFromVertex] = useState<number | null>(null);
     const [selectedVertex, setSelectedVertex] = useState<number | null>(null);
     const [selectedEdge, setSelectedEdge] = 
@@ -431,8 +430,8 @@ function Editor() {
                         { fromVertex !== null &&
                             <path 
                                 className="edgePath"
-                                d={`M ${graph.vertices[fromVertex].xpos} 
-                                    ${graph.vertices[fromVertex].ypos} 
+                                d={`M ${graph.vertices[fromVertex].pos.x} 
+                                    ${graph.vertices[fromVertex].pos.y} 
                                     L ${mousePos.x} ${mousePos.y}`}
                                 stroke="#000000"
                                 strokeWidth="2.5" 
@@ -514,7 +513,22 @@ function Editor() {
                 </details>
                 <details>
                     <summary>Import/Export</summary>
-                    <ImportExportMenu />
+                    <ImportExportMenu 
+                        onExportTikz={() => {
+                            const settings: TikzExportSettings = {
+                                vertexStyle: "STANDARD",
+                                showVertexLabels: true,
+                                edgeWeightStyle: "OUTSIDE",
+                                slopedEdgeWeight: false,
+                                isDirected: isDirected,
+                                edgeWidth: 0.4,
+                                textFormat: "MATH",
+                                trimPadding: true,
+                                coordinateScale: 0.02
+                            };
+                            console.log(toTikz(graph, settings));
+                        }}
+                    />
                 </details>
             </div>
         </div>

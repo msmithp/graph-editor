@@ -28,8 +28,8 @@ function EdgeGraphic({ source, destination, edge,
                 easier to click */}
             <path 
                 className="edgePath"
-                d={`M ${source.xpos} ${source.ypos} 
-                    L ${destination.xpos} ${destination.ypos}`}
+                d={`M ${source.pos.x} ${source.pos.y} 
+                    L ${destination.pos.x} ${destination.pos.y}`}
                 strokeWidth={INVISIBLE_EDGE_WIDTH}
                 visibility="hidden"
                 pointerEvents="all"
@@ -38,8 +38,8 @@ function EdgeGraphic({ source, destination, edge,
             {/* This is the actual edge */}
             <path 
                 className="edgePath"
-                d={`M ${source.xpos} ${source.ypos} 
-                    L ${destination.xpos} ${destination.ypos}`}
+                d={`M ${source.pos.x} ${source.pos.y} 
+                    L ${destination.pos.x} ${destination.pos.y}`}
                 stroke={edge.color}
                 fill="none"
                 strokeWidth={EDGE_WIDTH}

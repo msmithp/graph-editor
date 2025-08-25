@@ -35,7 +35,6 @@ export function roundToBase(x: number, base: number): number {
  * * If `value` is lower than `min`, return `min`
  * * If `value` is greater than `max`, return `max`
  * * Otherwise, return `value`
- * 
  * @param value Value to be squeezed
  * @param min High end of range
  * @param max Low end of range
@@ -126,7 +125,6 @@ export function outsideInIndices(length: number): number[] {
 
 /**
  * Check if any values exist in `nums` within the range `low`-`high`, inclusive
- * 
  * @param nums List of numbers
  * @param low Low end of range
  * @param high High end of range
@@ -160,7 +158,6 @@ export function binaryRangeSearch(nums: number[], low: number,
 /**
  * Perform a binary search to find the index of an element in a sorted array.
  * Based on Alexander Ryzhov's answer: https://stackoverflow.com/a/29018745
- * 
  * @param nums Sorted array
  * @param key Element being searched for
  * @param compare Comparison function for elements of array
@@ -194,7 +191,6 @@ export function binarySearch<T>(arr: T[], key: T,
 
 /**
  * Compare two numbers
- * 
  * @param num1 First number
  * @param num2 Second number
  * @returns The difference between `num1` and `num2`. That is,
@@ -204,4 +200,65 @@ export function binarySearch<T>(arr: T[], key: T,
  */
 function compareNumbers(num1: number, num2: number): number {
     return num1 - num2;
+}
+
+/**
+ * Convert a hex value string (like `"#F369D2"`) to an array of
+ * RGB values (like `[243, 105, 210]`)
+ * @param hex A hex code of a color. The leading pound sign (`#`) should be
+ *            included.
+ * @returns An array of exactly 3 integers, each between 0 and 255,
+ *          representing red, green, and blue values, respectively
+ */
+export function hexToRgb(hex: string): number[] {
+    return [
+        parseInt(hex.substring(1, 3), 16),
+        parseInt(hex.substring(3, 5), 16),
+        parseInt(hex.substring(5, 7), 16),
+    ];
+}
+
+/**
+ * Convert an array of RGB values (like `[243, 105, 210]`) to a hex code (like
+ * `"#F369D2"`)
+ * @param vals An array of exactly 3 integers, each between 0 and 255,
+ *             representing red, green, and blue values, respectively
+ * @returns A hex code of a color, including a leading pound sign (`#`)
+ */
+export function rgbToHex(vals: number[]): string {
+    let hex = "#";
+
+    for (const val of vals) {
+        // Convert value to a hexadecimal string
+        let hexVal = val.toString(16);
+
+        if (hexVal.length === 1) {
+            // Add leading 0, if necessary
+            hexVal = "0" + hexVal;
+        }
+        
+        hex += hexVal;
+    }
+
+    return hex;
+}
+
+/**
+ * Get an array with `n` equally-spaced numbers between `low` and `high`
+ * @param low Low end of range
+ * @param high High end of range
+ * @param n Number of values in resulting array
+ * @returns Array with `n` numbers between `low` and `high`
+ */
+export function getNBetween(low: number, high: number, n: number): number[] {
+    const range = high - low;
+    const between = range / n;
+
+    const nums = new Array(n);
+
+    for (let i = 0; i < n; i++) {
+        nums[i] = low + (i * between);
+    }
+
+    return nums;
 }

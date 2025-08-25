@@ -42,15 +42,12 @@ function MultiEdgeGraphic({ v1, v2, edges,
         const [source, destination] = e.isDirectionReversed ?
             [v2, v1] : [v1, v2];
 
-        const shape = `M ${source.xpos} ${source.ypos}
+        const shape = `M ${source.pos.x} ${source.pos.y}
                        Q ${midpoints[i].x} ${midpoints[i].y}
-                       ${destination.xpos} ${destination.ypos}`;
+                       ${destination.pos.x} ${destination.pos.y}`;
         
-        const arrowPts = getBezierArrowPoints(
-            { x: source.xpos, y: source.ypos },
-            midpoints[i],
-            { x: destination.xpos, y: destination.ypos }
-        );
+        const arrowPts = getBezierArrowPoints(source.pos, midpoints[i],
+            destination.pos);
 
         return (
             <g

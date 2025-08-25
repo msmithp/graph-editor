@@ -1,3 +1,5 @@
+import type { Point2D } from "./Graphics"
+
 /**
  * A graph consists of two parts:
  * * A list of vertices
@@ -14,8 +16,7 @@ export interface Graph {
 
 export interface Vertex {
     label: string,
-    xpos: number,
-    ypos: number,
+    pos: Point2D,
     color: string
 }
 

@@ -23,8 +23,7 @@ export function createVertex(graph: Graph, x: number, y: number,
 
     // Create new vertex
     const newVertex: Vertex = {
-        xpos: x,
-        ypos: y,
+        pos: { x: x, y: y },
         label: label === undefined ? "" : label,
         color: color === undefined ? "#FFFFFF" : color
     };
@@ -353,8 +352,7 @@ export function changeVertexLocation(graph: Graph, idx: number, x: number,
     }
 
     // Update x and y position of vertices
-    newVertices[idx].xpos = newX;
-    newVertices[idx].ypos = newY;
+    newVertices[idx].pos = { x: newX, y: newY };
 
     // Return new graph with updated vertex location
     return {
@@ -413,8 +411,10 @@ export function snapVerticesToGrid(graph: Graph, base: number): Graph {
 
     // Mutate new graph by rounding the coordinates of each vertex to base
     for (const v of newGraph.vertices) {
-        v.xpos = roundToBase(v.xpos, base);
-        v.ypos = roundToBase(v.ypos, base);
+        v.pos = {
+            x: roundToBase(v.pos.x, base),
+            y: roundToBase(v.pos.y, base)
+        };
     }
 
     return newGraph;

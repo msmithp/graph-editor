@@ -1,3 +1,7 @@
+// SVG canvas size
+export const WIDTH = 800;
+export const HEIGHT = 800;
+
 export const VERTEX_RADIUS = 15;
 
 // Edge width
