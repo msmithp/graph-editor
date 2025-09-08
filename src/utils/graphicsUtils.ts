@@ -559,7 +559,6 @@ function getTFromPoint(B: (t: number) => Point2D, pt: Point2D, dist: number,
     // iteration until `B(t)` is `dist` units away from `pt`, within `epsilon`
     for (let i = 0; i < MAX_ITERATIONS; i++) {
         t = (hi + lo) / 2;
-        // console.log(`i=${i}\thi=${hi}\tlo=${lo}\thi-lo=${hi-lo}\tt=${t}`);
         const bezierPt = B(t);
         const currentDistance = distance(bezierPt, pt);
 
@@ -709,7 +708,7 @@ function angleBetweenPoints(p1: Point2D, p2: Point2D,
     const x = p2.x - p1.x;
     const y = invertYAxis ? p1.y - p2.y : p2.y - p1.y;
 
-    if (y === x) {
+    if (y === 0 && x === 0) {
         // Default to 0 rad
         return 0;
     }
@@ -784,9 +783,9 @@ function getMultiEdgeWeightLocationsFromPoints(p1: Point2D, p2: Point2D,
 
 /**
  * For each vertex of a graph, get the optimal angle at which the vertex's
- * label can be drawn
+ * label can be drawn, in radians
  * @param graph Graph
- * @returns List of optimal label placement angles
+ * @returns List of optimal label placement angles (in radians)
  */
 export function getVertexLabelPlacementAngles(graph: Graph): number[] {
     // Get angles of all incoming and outgoing edges of vertices, sorted in
@@ -855,9 +854,9 @@ export function getVertexLabelPlacementAngles(graph: Graph): number[] {
 
 /**
  * For each vertex `v` of a graph, generate a list of angles between each
- * edge incident with `v` and the line `y = v.ypos`
+ * edge incident with `v` and the line `y = v.ypos`, in radians
  * @param graph Graph
- * @returns List of angles for each vertex of `graph`
+ * @returns List of angles (in radians) for each vertex of `graph`
  */
 function getVertexEdgeAngles(graph: Graph): number[][] {
     // Create double-adjacency graph in order to view all edges incident with
@@ -879,7 +878,7 @@ function getVertexEdgeAngles(graph: Graph): number[][] {
                 continue;
             } else if (edges.length === 1) {
                 // One ij edge - get simple angle between points
-                angles.push(angleBetweenPoints(p1, p2));
+                angles.push(angleBetweenPoints(p1, p2, false));
             } else {
                 // Many ij edges - calculate approximate angles of Bezier
                 // curves as they exit the vertex. First, get control points

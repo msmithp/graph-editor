@@ -3,7 +3,7 @@ import type { GraphJSON, TikzExportSettings } from "../types/IO";
 import { HEIGHT } from "./constants";
 import { 
     angleBetweenVertices, directionMagnitudeToComponents,
-    getVertexLabelPlacementAngles, invertYAxis, trimPadding
+    getVertexLabelPlacementAngles, invertYAxis, radiansToDegrees, trimPadding
 } from "./graphicsUtils";
 import { getEdgeIterator } from "./graphUtils";
 import { getNBetween, hexToRgb, squeeze } from "./utils";
@@ -69,7 +69,8 @@ function getTikzEdgeScope(settings: TikzExportSettings): string {
 }
 
 function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
-    const vertexLabelAngles = getVertexLabelPlacementAngles(graph);
+    const vertexLabelAngles = getVertexLabelPlacementAngles(graph)
+                              .map(radiansToDegrees);
 
     let output = "\t\\begin{scope}[" + getTikzVertexScope(settings) + "]\n";
 
@@ -102,8 +103,9 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
                 "$" + v.label + "$" : v.label;
             if (settings.vertexStyle === "DOT") {
                 // Label must go outside the vertex
-                vertexStr += ",label={" + vertexLabelAngles[i] + ":" + label + "}]"
-                        +  " at (" + v.pos.x + "," + v.pos.y + ") {};";
+                vertexStr += ",label={" + vertexLabelAngles[i] + ":" + label
+                        + "}] (" + i + ") at (" + v.pos.x + "," + v.pos.y
+                        + ") {};";
             } else {
                 // Otherwise, label goes inside the vertex
                 vertexStr += "] (" + i + ") at (" + v.pos.x + "," + v.pos.y
