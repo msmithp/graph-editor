@@ -998,6 +998,13 @@ export function directionMagnitudeToComponents(angle: number,
     return { x: x, y: y };
 }
 
+/**
+ * Invert the y-axis of a graph
+ * @param graph Graph
+ * @param maxY Highest possible y-value in coordinate system (i.e., canvas
+ *             height)
+ * @returns Graph with inverted y-axis
+ */
 export function invertYAxis(graph: Graph, maxY: number): Graph {
     const newVertices = graph.vertices.map(v => ({
         ...v,

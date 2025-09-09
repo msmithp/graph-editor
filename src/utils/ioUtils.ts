@@ -3,8 +3,8 @@ import type { GraphJSON, TikzExportSettings } from "../types/IO";
 import { HEIGHT } from "./constants";
 import { 
     angleBetweenVertices, directionMagnitudeToComponents,
-    getDistanceScalar,
-    getVertexLabelPlacementAngles, invertYAxis, radiansToDegrees, trimPadding
+    getDistanceScalar, getVertexLabelPlacementAngles, invertYAxis,
+    radiansToDegrees, trimPadding
 } from "./graphicsUtils";
 import { getEdgeIterator } from "./graphUtils";
 import { getNBetween, hexToRgb, squeeze } from "./utils";
@@ -44,6 +44,12 @@ export function toTikz(graph: Graph, settings: TikzExportSettings): string {
     return output;
 }
 
+/**
+ * Get a string for the options within a scope block for the vertices of a TikZ
+ * graph based on export settings
+ * @param settings TikZ export settings
+ * @returns TikZ scope block options
+ */
 function getTikzVertexScope(settings: TikzExportSettings): string {
     let scopeStr = "every node/.style={";
 
@@ -64,8 +70,22 @@ function getTikzVertexScope(settings: TikzExportSettings): string {
     return scopeStr;
 }
 
+/**
+ * Get a string for the options within a scope block for the edges of a TikZ
+ * graph based on export settings
+ * @param settings TikZ export settings
+ * @returns TikZ scope block options
+ */
 function getTikzEdgeScope(settings: TikzExportSettings): string {
     let nodeStyle = "every node/.style={";
+
+    if (settings.slopedEdgeWeight) {
+        nodeStyle += "sloped,";
+    }
+
+    if (settings.edgeWeightStyle === "INSIDE") {
+        nodeStyle += "fill=white,"
+    }
 
     nodeStyle += "}";
 
@@ -75,6 +95,12 @@ function getTikzEdgeScope(settings: TikzExportSettings): string {
     return nodeStyle + "," + pathStyle;
 }
 
+/**
+ * Create TikZ nodes for the vertices of a graph
+ * @param graph Graph
+ * @param settings TikZ export settings
+ * @returns Scope block containing all vertices as TikZ nodes
+ */
 function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
     const vertexLabelAngles = getVertexLabelPlacementAngles(graph)
                               .map(radiansToDegrees);
@@ -83,25 +109,29 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
 
     for (let i = 0; i < graph.vertices.length; i++) {
         const v = graph.vertices[i];
+        const x = v.pos.x.toFixed(NUM_DIGITS);
+        const y = v.pos.y.toFixed(NUM_DIGITS);
         let vertexStr = "\t\t\\node[";
 
         // Only draw fill color for DOT and STANDARD styles
         if (settings.vertexStyle === "DOT"
-            || settings.vertexStyle === "STANDARD") {  
-            // Convert hex code to RGB
-            const rgb = hexToRgb(v.color);
-            const fill = "{rgb,255:red," + rgb[0] + ";"
-                       + "green,"    + rgb[1] + ";"
-                       + "blue,"     + rgb[2] + "}";
-            vertexStr += "fill=" + fill;
+            || settings.vertexStyle === "STANDARD") {
+            // If using the dot style, pure white vertices are given no fill
+            // so they default to black, making them visible
+            if (!(settings.vertexStyle === "DOT" && v.color === "#FFFFFF")) {
+                const rgb = hexToRgb(v.color);
+                const fill = "{rgb,255:red," + rgb[0] + ";"
+                        + "green,"    + rgb[1] + ";"
+                        + "blue,"     + rgb[2] + "}";
+                vertexStr += "fill=" + fill + ',';
+            }
         }
 
         if (!settings.showVertexLabels) {
             // Finish vertex string with no label
-            vertexStr += "] (" + i + ") at (" + v.pos.x.toFixed(NUM_DIGITS) 
-                      + "," + v.pos.y.toFixed(NUM_DIGITS) +  ") {};";
+            vertexStr += "] (" + i + ") at (" + x + "," + y +  ") {};";
 
-            output += vertexStr;
+            output += vertexStr + '\n';
             continue;
         }
 
@@ -110,18 +140,16 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
                 "$" + v.label + "$" : v.label;
             if (settings.vertexStyle === "DOT") {
                 // Label must go outside the vertex
-                vertexStr += ",label={" + vertexLabelAngles[i] + ":" + label
-                        + "}] (" + i + ") at (" + v.pos.x.toFixed(NUM_DIGITS) 
-                        + "," + v.pos.y.toFixed(NUM_DIGITS) + ") {};";
+                vertexStr += "label={" + vertexLabelAngles[i] + ":" + label
+                          +  "}] (" + i + ") at (" + x + "," + y + ") {};";
             } else {
                 // Otherwise, label goes inside the vertex
-                vertexStr += "] (" + i + ") at (" + v.pos.x.toFixed(NUM_DIGITS)
-                        + "," + v.pos.y.toFixed(NUM_DIGITS) +  ") {" + label
-                        + "};";
+                vertexStr += "] (" + i + ") at (" + x + "," + y +  ") {"
+                          +  label + "};";
             }
         }
 
-        output += vertexStr + "\n";
+        output += vertexStr + '\n';
     }
 
     output += "\t\\end{scope}\n";
@@ -129,6 +157,12 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
     return output;
 }
 
+/**
+ * Create TikZ paths for the edges of a graph
+ * @param graph Graph
+ * @param settings TikZ export settings
+ * @returns Scope block containing all edges as TikZ paths
+ */
 function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
     let output = "\t\\begin{scope}[" + getTikzEdgeScope(settings) + "]\n";
     
@@ -139,20 +173,22 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
             const edgeInfo = edges[i];
             let edgeStr = "\t\t\\path";
 
+            // Source and destination vertex indices
+            const [src, dest] = edgeInfo.source === v1 ? [v1, v2] : [v2, v1];
+
             if (settings.isDirected) {
-                const arrowStr = edgeInfo.source === v1 ? "->" : "<-";
-                edgeStr += '[' + arrowStr + ']';
+                edgeStr += "[->]";
             }
 
-            edgeStr += " (" + v1 + ") edge";
+            edgeStr += " (" + src + ") edge";
 
             if (bends.length >= 2) {
                 edgeStr += "[ bend right=" + bends[i] + ']';
             }
 
             if (edgeInfo.edge.weight !== "") {
-                const weightShift = getTikzEdgeWeightShift(graph.vertices[v1],
-                    graph.vertices[v2], edgeInfo.edge);
+                const weightShift = getTikzEdgeWeightShift(graph.vertices[src],
+                    graph.vertices[dest], edgeInfo.edge, settings);
                 edgeStr += " node[xshift=" 
                         + weightShift.xshift.toFixed(NUM_DIGITS) + "pt,"
                         + "yshift=" + weightShift.yshift.toFixed(NUM_DIGITS)
@@ -164,7 +200,7 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
                 edgeStr += '{' + weightLabel + '}';
             }
 
-            edgeStr += " (" + v2 + ");";
+            edgeStr += " (" + dest + ");";
 
             output += edgeStr + '\n';
         }
@@ -175,6 +211,12 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
     return output;
 }
 
+/**
+ * Get a list of edge bends between 15 and 90 for a given number of edges to be
+ * drawn on a TikZ graph
+ * @param numEdges Number of edges between vertices
+ * @returns List of edge bends
+ */
 function getTikzEdgeBends(numEdges: number): number[] {
     if (numEdges == 0) {
         return []
@@ -186,15 +228,33 @@ function getTikzEdgeBends(numEdges: number): number[] {
     }    
 }
 
+/**
+ * Get the x- and y-shift values for an edge weight to be drawn on a TikZ graph
+ * @param v1 Source vertex
+ * @param v2 Destination vertex
+ * @param edge Edge
+ * @param settings TikZ export settings
+ * @returns x- and y-shift values for an edge weight
+ */
 function getTikzEdgeWeightShift(v1: Vertex, v2: Vertex, 
-    edge: Edge): { xshift: number, yshift: number } {
-    // Get angle for edge weight label shift
+    edge: Edge, settings: TikzExportSettings
+): { xshift: number, yshift: number } {
+    // Minimum distance away from an edge that weight should be
+    const BASE_MAGNITUDE = 9;
+
+    if (settings.edgeWeightStyle === "INSIDE") {
+        return { xshift: 0, yshift: 0 };
+    } else if (settings.edgeWeightStyle === "OUTSIDE" 
+               && settings.slopedEdgeWeight) {
+        return { xshift: 0, yshift: BASE_MAGNITUDE };
+    }
+    
+    // Get angle perpendicular to the angle between v1 and v2
     const angle = angleBetweenVertices(v1, v2, false);
     const perpendicularAngle = (angle + Math.PI/2) % (2 * Math.PI);
 
     // Get distance from middle of edge for edge weight
-    const BASE_MAGNITUDE = 6;
-    const LENGTH_MULTIPLIER = 2;
+    const LENGTH_MULTIPLIER = 1.5;
     const c = getDistanceScalar(v1.pos, v2.pos);
     const magnitude = BASE_MAGNITUDE 
                     + (edge.weight.length * LENGTH_MULTIPLIER) * c;
