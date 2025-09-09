@@ -3,10 +3,17 @@ import type { GraphJSON, TikzExportSettings } from "../types/IO";
 import { HEIGHT } from "./constants";
 import { 
     angleBetweenVertices, directionMagnitudeToComponents,
+    getDistanceScalar,
     getVertexLabelPlacementAngles, invertYAxis, radiansToDegrees, trimPadding
 } from "./graphicsUtils";
 import { getEdgeIterator } from "./graphUtils";
 import { getNBetween, hexToRgb, squeeze } from "./utils";
+
+/** 
+ * Number of digits after the decimal place to display for numbers in TikZ
+ * output 
+ */
+const NUM_DIGITS = 2;
 
 /**
  * Export a graph to TikZ (LaTeX) code
@@ -91,8 +98,8 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
 
         if (!settings.showVertexLabels) {
             // Finish vertex string with no label
-            vertexStr += "] (" + i + ") at (" + v.pos.x + "," + v.pos.y
-                      +  ") {};";
+            vertexStr += "] (" + i + ") at (" + v.pos.x.toFixed(NUM_DIGITS) 
+                      + "," + v.pos.y.toFixed(NUM_DIGITS) +  ") {};";
 
             output += vertexStr;
             continue;
@@ -104,12 +111,13 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
             if (settings.vertexStyle === "DOT") {
                 // Label must go outside the vertex
                 vertexStr += ",label={" + vertexLabelAngles[i] + ":" + label
-                        + "}] (" + i + ") at (" + v.pos.x + "," + v.pos.y
-                        + ") {};";
+                        + "}] (" + i + ") at (" + v.pos.x.toFixed(NUM_DIGITS) 
+                        + "," + v.pos.y.toFixed(NUM_DIGITS) + ") {};";
             } else {
                 // Otherwise, label goes inside the vertex
-                vertexStr += "] (" + i + ") at (" + v.pos.x + "," + v.pos.y
-                        +  ") {" + label + "};";
+                vertexStr += "] (" + i + ") at (" + v.pos.x.toFixed(NUM_DIGITS)
+                        + "," + v.pos.y.toFixed(NUM_DIGITS) +  ") {" + label
+                        + "};";
             }
         }
 
@@ -124,7 +132,7 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
 function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
     let output = "\t\\begin{scope}[" + getTikzEdgeScope(settings) + "]\n";
     
-    getEdgeIterator(graph).forEach(([v1, v2], edges, _) => {
+    getEdgeIterator(graph).forEach(([v1, v2], edges) => {
         const bends = getTikzEdgeBends(edges.length);
 
         for (let i = 0; i < edges.length; i++) {
@@ -143,10 +151,12 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
             }
 
             if (edgeInfo.edge.weight !== "") {
-                const weightInfo = getTikzEdgeWeightInfo(graph.vertices[v1],
-                graph.vertices[v2], edgeInfo.edge);
-                edgeStr += " node[xshift=" + weightInfo.xshift + "pt,"
-                        +  "yshift=" + weightInfo.yshift + "pt]";
+                const weightShift = getTikzEdgeWeightShift(graph.vertices[v1],
+                    graph.vertices[v2], edgeInfo.edge);
+                edgeStr += " node[xshift=" 
+                        + weightShift.xshift.toFixed(NUM_DIGITS) + "pt,"
+                        + "yshift=" + weightShift.yshift.toFixed(NUM_DIGITS)
+                        + "pt]";
 
                 const weightLabel = settings.textFormat === "MATH" ?
                     '$' + edgeInfo.edge.weight + '$' : edgeInfo.edge.weight;
@@ -176,7 +186,7 @@ function getTikzEdgeBends(numEdges: number): number[] {
     }    
 }
 
-function getTikzEdgeWeightInfo(v1: Vertex, v2: Vertex, 
+function getTikzEdgeWeightShift(v1: Vertex, v2: Vertex, 
     edge: Edge): { xshift: number, yshift: number } {
     // Get angle for edge weight label shift
     const angle = angleBetweenVertices(v1, v2, false);
@@ -185,7 +195,9 @@ function getTikzEdgeWeightInfo(v1: Vertex, v2: Vertex,
     // Get distance from middle of edge for edge weight
     const BASE_MAGNITUDE = 6;
     const LENGTH_MULTIPLIER = 2;
-    const magnitude = BASE_MAGNITUDE + edge.weight.length * LENGTH_MULTIPLIER;
+    const c = getDistanceScalar(v1.pos, v2.pos);
+    const magnitude = BASE_MAGNITUDE 
+                    + (edge.weight.length * LENGTH_MULTIPLIER) * c;
 
     const vec = directionMagnitudeToComponents(perpendicularAngle, magnitude);
     const xshift = vec.x;

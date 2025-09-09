@@ -638,14 +638,10 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
     // Padding added between edge weight and edge line
     const PADDING = 10;
 
-    // Using the angle between p1 and p2, get a constant `c` between 0 and 1
-    // such that c = 0 when p1 and p2 are at the same y-value and c = 1 when
-    // p1 and p2 are at the same x-value. This ensures that no distance is
-    // placed between the text and the edge when the edge line is horizontal,
-    // and maximum distance is placed between the text and the edge when the
-    // edge line is vertical.
-    const theta = radiansToDegrees(angleBetweenPoints(p1, p2));
-    const c = Math.sin(degreesToRadians(theta % 180));
+    // Distance scalar, which ensures that no distance is placed between the
+    // text and the edge when the edge line is horizontal, and maximum distance
+    // is placed between the text and the edge when the edge line is vertical
+    const c = getDistanceScalar(p1, p2);
 
     // Distance away from the edge that the text should be
     const dist = (textWidth / 2) * c;
@@ -661,6 +657,19 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
     weightPt.y += CHAR_HEIGHT/2;
 
     return weightPt;
+}
+
+/**
+ * Using the angle between p1 and p2, get a constant `c` between 0 and 1
+ * such that c = 0 when p1 and p2 are at the same y-value and c = 1 when
+ * p1 and p2 are at the same x-value.
+ * @param p1 First point
+ * @param p2 Second point
+ * @returns Value between 0 and 1
+ */
+export function getDistanceScalar(p1: Point2D, p2: Point2D): number {
+    const theta = angleBetweenPoints(p1, p2);
+    return Math.sin(theta % (Math.PI));
 }
 
 /**
