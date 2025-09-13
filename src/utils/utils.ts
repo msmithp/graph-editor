@@ -248,11 +248,19 @@ export function rgbToHex(vals: number[]): string {
  * @param low Low end of range
  * @param high High end of range
  * @param n Number of values in resulting array
+ * @param inclusive If `true`, include both `low` and `high` in resulting array
+ *                  (except for when `n=1`, in which case the average of `low`
+ *                  and `high` is returned)
  * @returns Array with `n` numbers between `low` and `high`
  */
-export function getNBetween(low: number, high: number, n: number): number[] {
+export function getNBetween(low: number, high: number, n: number,
+    inclusive: boolean = true): number[] {
+    if (n === 1) {
+        return inclusive ? [(high + low) / 2] : [low];
+    }
+
     const range = high - low;
-    const between = range / n;
+    const between = inclusive ? range / (n-1) : range / n;
 
     const nums = new Array(n);
 

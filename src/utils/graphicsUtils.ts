@@ -338,8 +338,7 @@ export function getBezierArrowPoints(p0: Point2D, p1: Point2D,
     const EPSILON = 0.1
 
     const B = createQuadraticBezierFunction(p0, p1, p2);
-    const t = getTFromPoint(B, { x: p2.x, y: p2.y },
-        VERTEX_RADIUS, EPSILON);
+    const t = getTDistanceFromEndpoint(B, VERTEX_RADIUS, EPSILON);
     const arrowLineStart = getBezierSecantPointFromT(B, t);
     const arrowLineEnd = B(t);
 
@@ -539,16 +538,16 @@ function createQuadraticBezierFunction(p0: Point2D, p1: Point2D, p2: Point2D):
 
 /**
  * Approximate the value of `t` for which `B(t)` is `dist` units away from
- * `pt`, within `epsilon` units
+ * the endpoint `B(1)`, within `epsilon` units
  * @param B Quadratic Bezier function, which takes a value `t` between 0 and 1
  *          as input and outputs a point on the plane
- * @param pt Point on the plane
  * @param dist Distance between `B(t)` and `pt`
  * @param epsilon Tolerance for `dist`
  * @returns Value of `t` for which `B(t)` is `dist` units away from `pt`
  */
-function getTFromPoint(B: (t: number) => Point2D, pt: Point2D, dist: number,
+function getTDistanceFromEndpoint(B: (t: number) => Point2D, dist: number,
     epsilon: number): number {
+    const pt = B(1);
     const MAX_ITERATIONS = 20;
     let hi = 1;
     let lo = 0;
@@ -694,13 +693,13 @@ export function degreesToRadians(degrees: number): number {
  * Get the angle between two vertices, in radians between 0 and 2pi
  * @param v1 First vertex
  * @param v2 Second vertex
- * @param invertYAxis `true` if y-value increases from top to bottom, `false`
- *                    if y-value increases from bottom to top
+ * @param isYAxisInverted `true` if y-value increases from top to bottom,
+ *                        `false` if y-value increases from bottom to top
  * @returns Angle between `v1` and `v2`
  */
 export function angleBetweenVertices(v1: Vertex, v2: Vertex,
-    invertYAxis: boolean = true): number {
-    return angleBetweenPoints(v1.pos, v2.pos, invertYAxis);
+    isYAxisInverted: boolean = true): number {
+    return angleBetweenPoints(v1.pos, v2.pos, isYAxisInverted);
 }
 
 /**
@@ -708,14 +707,14 @@ export function angleBetweenVertices(v1: Vertex, v2: Vertex,
  * line `y = y1` and the point `(x2, y2)`, in radians
  * @param p1 First point `(x1, y1)`
  * @param p2 Second point `(x2, y2)`
- * @param invertYAxis `true` if y-value increases from top to bottom, `false`
- *                    if y-value increases from bottom to top
+ * @param isYAxisInverted `true` if y-value increases from top to bottom,
+ *                        `false` if y-value increases from bottom to top
  * @returns Angle between `p1` and `p2`
  */
-function angleBetweenPoints(p1: Point2D, p2: Point2D,
-    invertYAxis: boolean = true): number {
+export function angleBetweenPoints(p1: Point2D, p2: Point2D,
+    isYAxisInverted: boolean = true): number {
     const x = p2.x - p1.x;
-    const y = invertYAxis ? p1.y - p2.y : p2.y - p1.y;
+    const y = isYAxisInverted ? p1.y - p2.y : p2.y - p1.y;
 
     if (y === 0 && x === 0) {
         // Default to 0 rad
@@ -801,64 +800,8 @@ export function getVertexLabelPlacementAngles(graph: Graph): number[] {
     // ascending order
     const edgeAngles = getVertexEdgeAngles(graph).map(arr => arr.sort());
 
-    const labelAngles = edgeAngles.map(angleList => {
-        const DIFF = (7 * Math.PI) / 36;  // 35 degrees
-
-        // Try top first
-        const TOP = 0.5 * Math.PI;
-        if (!binaryRangeSearch(angleList, TOP - DIFF, TOP + DIFF)) {
-            return TOP;
-        }
-
-        // Then try bottom
-        const BOTTOM = 1.5 * Math.PI;
-        if (!binaryRangeSearch(angleList, BOTTOM - DIFF, BOTTOM + DIFF)) {
-            return BOTTOM;
-        }
-
-        // Then try left
-        const LEFT = Math.PI;
-        if (!binaryRangeSearch(angleList, LEFT - DIFF, LEFT + DIFF)) {
-            return LEFT;
-        }
-
-        // Finally, try right (two separate searches are necessary because
-        // angles are in modulo 2pi)
-        const RIGHT = 0;
-        const RIGHT_FULL = 2 * Math.PI;
-        if (!binaryRangeSearch(angleList, RIGHT_FULL - DIFF, RIGHT_FULL)
-            && !binaryRangeSearch(angleList, RIGHT, RIGHT + DIFF)) {
-            return RIGHT;
-        }
-
-        // All sides taken - find the angle furthest from the angles of all
-        // incident edges
-        let maxDiff = 0;
-        let maxDiffIdx = 0;
-        for (let i = 0; i < angleList.length - 1; i++) {
-            const elem1 = angleList[i];
-            const elem2 = angleList[i+1];
-            const diff = elem2 - elem1;
-
-            if (diff > maxDiff) {
-                maxDiff = diff;
-                maxDiffIdx = i;
-            }
-        }
-
-        // Check difference between last and first element, in modulo 2pi
-        const first = angleList[0] + 2 * Math.PI;
-        const last = angleList[angleList.length - 1];
-        if (first - last > maxDiff) {
-            maxDiff = first - last;
-            maxDiffIdx = angleList.length - 1;
-        }
-
-        // Return angle in between the two angles with the maximum difference
-        return (angleList[maxDiffIdx] + maxDiff/2) % (2 * Math.PI);
-    });
-
-    return labelAngles;
+    // Return best fitting angle for each vertex
+    return edgeAngles.map(bestFittingAngle);
 }
 
 /**
@@ -877,7 +820,7 @@ function getVertexEdgeAngles(graph: Graph): number[][] {
 
     for (let i = 0; i < doubleAdjacencyGraph.vertices.length; i++) {
         const p1 = doubleAdjacencyGraph.vertices[i].pos;
-        let angles = [];
+        const angles = [];
 
         for (const [j, edges] of doubleAdjacencyGraph.edges[i].entries()) {
             const p2 = doubleAdjacencyGraph.vertices[j].pos;
@@ -900,11 +843,11 @@ function getVertexEdgeAngles(graph: Graph): number[][] {
 
                 angles.push(...controlPts.map(c => {
                     // Create Bezier functions for each edge
-                    const B = createQuadraticBezierFunction(p1, c, p2);
+                    const B = createQuadraticBezierFunction(p2, c, p1);
 
                     // Calculate approximate `t` value for which the Bezier
                     // function is VERTEX_RADIUS units away from p1
-                    const t = getTFromPoint(B, p1, VERTEX_RADIUS, 0.1);
+                    const t = getTDistanceFromEndpoint(B, VERTEX_RADIUS, 0.1);
 
                     // Get point at B(t)
                     const intersectionPt = B(t);
@@ -919,6 +862,91 @@ function getVertexEdgeAngles(graph: Graph): number[][] {
     }
 
     return allAngles;
+}
+
+/**
+ * Given a list of angles, get the best fitting angle at which to place a
+ * label. This function tries, in order: 
+ *   * Top (0.5pi)
+ *   * Bottom (1.5pi)
+ *   * Left (pi)
+ *   * Right (0)
+ * 
+ * If all of these angles are obstructed, then the angle furthest from all
+ * other angles is returned.
+ * @param angles Array of angles, measured in radians
+ * @returns Best fitting angle
+ */
+export function bestFittingAngle(angles: number[]): number {
+    const DIFF = (7 * Math.PI) / 36;  // 35 degree tolerance
+
+    // Try top first
+    const TOP = 0.5 * Math.PI;
+    if (!binaryRangeSearch(angles, TOP - DIFF, TOP + DIFF)) {
+        return TOP;
+    }
+
+    // Then try bottom
+    const BOTTOM = 1.5 * Math.PI;
+    if (!binaryRangeSearch(angles, BOTTOM - DIFF, BOTTOM + DIFF)) {
+        return BOTTOM;
+    }
+
+    // Then try left
+    const LEFT = Math.PI;
+    if (!binaryRangeSearch(angles, LEFT - DIFF, LEFT + DIFF)) {
+        return LEFT;
+    }
+
+    // Finally, try right (two separate searches are necessary because
+    // angles are in modulo 2pi)
+    const RIGHT = 0;
+    const RIGHT_FULL = 2 * Math.PI;
+    if (!binaryRangeSearch(angles, RIGHT_FULL - DIFF, RIGHT_FULL)
+        && !binaryRangeSearch(angles, RIGHT, RIGHT + DIFF)) {
+        return RIGHT;
+    }
+
+    // All sides taken - find the angle furthest from the angles of all
+    // incident edges
+    return greatestMinAngleDistance(angles);
+}
+
+/**
+ * Given a list of angles, measured in radians, sorted in non-descending order,
+ * return the angle between 0 and 2pi with the greatest minimum distance from
+ * all angles in the list. Informally, this is the angle farthest from all of
+ * the other angles.
+ * @param angles List of angles, measured in radians
+ * @returns Angle with the greatest minimum distance from the angles in
+ *          `angles`, between 0 and 2pi and measured in radians
+ */
+function greatestMinAngleDistance(angles: number[]): number {
+    // Find the greatest difference between two angles, not counting the
+    // difference between the last and first angle
+    let maxDiff = 0;
+    let maxDiffIdx = 0;
+    for (let i = 0; i < angles.length - 1; i++) {
+        const elem1 = angles[i];
+        const elem2 = angles[i+1];
+        const diff = elem2 - elem1;
+
+        if (diff > maxDiff) {
+            maxDiff = diff;
+            maxDiffIdx = i;
+        }
+    }
+
+    // Check difference between last and first angles, in modulo 2pi
+    const first = angles[0] + 2 * Math.PI;
+    const last = angles[angles.length - 1];
+    if (first - last > maxDiff) {
+        maxDiff = first - last;
+        maxDiffIdx = angles.length - 1;
+    }
+
+    // Return angle in between the two angles with the maximum difference
+    return (angles[maxDiffIdx] + maxDiff/2) % (2 * Math.PI);
 }
 
 /**

@@ -2,11 +2,13 @@ import type { Edge, Graph, Vertex } from "../types/Graph";
 import type { GraphJSON, TikzExportSettings } from "../types/IO";
 import { HEIGHT } from "./constants";
 import { 
-    angleBetweenVertices, directionMagnitudeToComponents,
-    getDistanceScalar, getVertexLabelPlacementAngles, invertYAxis,
-    radiansToDegrees, trimPadding
+    angleBetweenPoints, angleBetweenVertices, bestFittingAngle,
+    degreesToRadians,
+    directionMagnitudeToComponents, getDistanceScalar,
+    getVertexLabelPlacementAngles, invertYAxis, radiansToDegrees,
+    scaleCoordinates, trimPadding
 } from "./graphicsUtils";
-import { getEdgeIterator } from "./graphUtils";
+import { createDoubleAdjacencyGraph, getEdgeIterator } from "./graphUtils";
 import { getNBetween, hexToRgb, squeeze } from "./utils";
 
 /** 
@@ -23,6 +25,7 @@ const NUM_DIGITS = 2;
  */
 export function toTikz(graph: Graph, settings: TikzExportSettings): string {
     let tikzGraph = invertYAxis(graph, HEIGHT);
+    tikzGraph = scaleCoordinates(tikzGraph, 0.01);
 
     if (settings.trimPadding) {
         tikzGraph = trimPadding(tikzGraph);
@@ -102,8 +105,10 @@ function getTikzEdgeScope(settings: TikzExportSettings): string {
  * @returns Scope block containing all vertices as TikZ nodes
  */
 function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
-    const vertexLabelAngles = getVertexLabelPlacementAngles(graph)
-                              .map(radiansToDegrees);
+    const vertexLabelAngles = getTikzVertexLabelPlacementAngles(graph, 
+        settings, true).map(radiansToDegrees);
+
+    console.log(vertexLabelAngles);
 
     let output = "\t\\begin{scope}[" + getTikzVertexScope(settings) + "]\n";
 
@@ -157,6 +162,58 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
     return output;
 }
 
+function getTikzVertexLabelPlacementAngles(graph: Graph,
+    settings: TikzExportSettings, isYAxisInverted: boolean): number[] {
+    const doubleAdjacencyGraph = isYAxisInverted ? (
+        createDoubleAdjacencyGraph(invertYAxis(graph, HEIGHT))
+    ) : (
+        createDoubleAdjacencyGraph(graph)
+    );
+    
+    const allAngles: number[][] = new Array(
+        doubleAdjacencyGraph.vertices.length
+    );
+
+    for (let i = 0; i < doubleAdjacencyGraph.vertices.length; i++) {
+        const p1 = doubleAdjacencyGraph.vertices[i].pos;
+        const angles = [];
+
+        for (const [j, edges] of doubleAdjacencyGraph.edges[i].entries()) {
+            const p2 = doubleAdjacencyGraph.vertices[j].pos;
+
+            if (edges.length === 0) {
+                // No ij edges - ignore
+                continue;
+            } else if (edges.length === 1) {
+                // One ij edge - get simple angle between points
+                angles.push(angleBetweenPoints(p1, p2));
+            } else {
+                // Many ij edges - get TikZ edge bends and calculate angles of
+                // outgoing multi-edges
+                const angle = angleBetweenPoints(p1, p2);
+                const outgoing = getTikzEdgeBends(edges, settings).map(bend => 
+                    // Add 2pi to account for potentially negative angles
+                    (2 * Math.PI 
+                        // Bends refer to amount moved clockwise from `angle`,
+                        // so subtract it from `angle` to get the angle at
+                        // which it leaves the vertex
+                        + (angle - degreesToRadians(bend)))
+                        % (2 * Math.PI)
+                );
+
+                angles.push(...outgoing);
+            }
+        }
+
+        allAngles[i] = angles;
+    }
+
+    const sortedAngles = allAngles.map(arr => arr.sort());
+
+    console.log(sortedAngles.map(arr => arr.map(radiansToDegrees)));
+    return sortedAngles.map(bestFittingAngle);
+}
+
 /**
  * Create TikZ paths for the edges of a graph
  * @param graph Graph
@@ -167,32 +224,33 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
     let output = "\t\\begin{scope}[" + getTikzEdgeScope(settings) + "]\n";
     
     getEdgeIterator(graph).forEach(([v1, v2], edges) => {
-        const bends = getTikzEdgeBends(edges.length);
+        const bends = getTikzEdgeBends(edges.map(e => e.edge), settings);
 
         for (let i = 0; i < edges.length; i++) {
             const edgeInfo = edges[i];
             let edgeStr = "\t\t\\path";
 
-            // Source and destination vertex indices
-            const [src, dest] = edgeInfo.source === v1 ? [v1, v2] : [v2, v1];
+            const reversed = edgeInfo.source !== v1;
 
             if (settings.isDirected) {
-                edgeStr += "[->]";
+                edgeStr += reversed ? "[<-]" : "[->]";
             }
 
-            edgeStr += " (" + src + ") edge";
+            edgeStr += " (" + v1 + ") edge";
 
             if (bends.length >= 2) {
-                edgeStr += "[ bend right=" + bends[i] + ']';
+                edgeStr += "[bend right=" + bends[i] + ']';
             }
 
             if (edgeInfo.edge.weight !== "") {
-                const weightShift = getTikzEdgeWeightShift(graph.vertices[src],
-                    graph.vertices[dest], edgeInfo.edge, settings);
-                edgeStr += " node[xshift=" 
-                        + weightShift.xshift.toFixed(NUM_DIGITS) + "pt,"
-                        + "yshift=" + weightShift.yshift.toFixed(NUM_DIGITS)
-                        + "pt]";
+                const weightShift = getTikzEdgeWeightShift(graph.vertices[v1],
+                    graph.vertices[v2], edgeInfo.edge, settings);
+
+                const xshift = weightShift.xshift.toFixed(NUM_DIGITS);
+                const yshift = weightShift.yshift.toFixed(NUM_DIGITS);
+                
+                edgeStr += " node[xshift=" + xshift + "pt,"
+                        +  "yshift=" + yshift + "pt]";
 
                 const weightLabel = settings.textFormat === "MATH" ?
                     '$' + edgeInfo.edge.weight + '$' : edgeInfo.edge.weight;
@@ -200,7 +258,7 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
                 edgeStr += '{' + weightLabel + '}';
             }
 
-            edgeStr += " (" + dest + ");";
+            edgeStr += " (" + v2 + ");";
 
             output += edgeStr + '\n';
         }
@@ -212,20 +270,26 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
 }
 
 /**
- * Get a list of edge bends between 15 and 90 for a given number of edges to be
- * drawn on a TikZ graph
- * @param numEdges Number of edges between vertices
+ * Get a list of edge bends between 15 and 90 for some given edges to be drawn
+ * on a TikZ graph
+ * @param edges Number of edges between vertices
+ * @param settings TikZ export settings
  * @returns List of edge bends
  */
-function getTikzEdgeBends(numEdges: number): number[] {
+function getTikzEdgeBends(edges: Edge[], settings: TikzExportSettings): number[] {
+    const numEdges = edges.length;
+
     if (numEdges == 0) {
         return []
     } else if (numEdges == 1) {
         return [0]
     } else {
-        const maxBend = squeeze(numEdges*10, 15, 90);
+        const base = 8;
+        const maxLength = Math.max(...edges.map(e => e.weight.length));
+        const angleDiff = base + numEdges*4*maxLength
+        const maxBend = squeeze(angleDiff, 15, 90);
         return getNBetween(-maxBend, maxBend, numEdges);
-    }    
+    }
 }
 
 /**
