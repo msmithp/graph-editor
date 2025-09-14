@@ -3,10 +3,8 @@ import type { GraphJSON, TikzExportSettings } from "../types/IO";
 import { HEIGHT } from "./constants";
 import { 
     angleBetweenPoints, angleBetweenVertices, bestFittingAngle,
-    degreesToRadians,
-    directionMagnitudeToComponents, getDistanceScalar,
-    getVertexLabelPlacementAngles, invertYAxis, radiansToDegrees,
-    scaleCoordinates, trimPadding
+    degreesToRadians, directionMagnitudeToComponents, getDistanceScalar,
+    invertYAxis, radiansToDegrees, scaleCoordinates, trimPadding
 } from "./graphicsUtils";
 import { createDoubleAdjacencyGraph, getEdgeIterator } from "./graphUtils";
 import { getNBetween, hexToRgb, squeeze } from "./utils";
@@ -108,8 +106,6 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
     const vertexLabelAngles = getTikzVertexLabelPlacementAngles(graph, 
         settings, true).map(radiansToDegrees);
 
-    console.log(vertexLabelAngles);
-
     let output = "\t\\begin{scope}[" + getTikzVertexScope(settings) + "]\n";
 
     for (let i = 0; i < graph.vertices.length; i++) {
@@ -126,8 +122,8 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
             if (!(settings.vertexStyle === "DOT" && v.color === "#FFFFFF")) {
                 const rgb = hexToRgb(v.color);
                 const fill = "{rgb,255:red," + rgb[0] + ";"
-                        + "green,"    + rgb[1] + ";"
-                        + "blue,"     + rgb[2] + "}";
+                           + "green,"        + rgb[1] + ";"
+                           + "blue,"         + rgb[2] + "}";
                 vertexStr += "fill=" + fill + ',';
             }
         }
@@ -135,12 +131,7 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
         if (!settings.showVertexLabels) {
             // Finish vertex string with no label
             vertexStr += "] (" + i + ") at (" + x + "," + y +  ") {};";
-
-            output += vertexStr + '\n';
-            continue;
-        }
-
-        if (v.label !== "") {
+        } else if (v.label !== "") {
             const label = settings.textFormat === "MATH" ?
                 "$" + v.label + "$" : v.label;
             if (settings.vertexStyle === "DOT") {
@@ -175,11 +166,13 @@ function getTikzVertexLabelPlacementAngles(graph: Graph,
     );
 
     for (let i = 0; i < doubleAdjacencyGraph.vertices.length; i++) {
-        const p1 = doubleAdjacencyGraph.vertices[i].pos;
+        const v1 = doubleAdjacencyGraph.vertices[i];
+        const p1 = v1.pos;
         const angles = [];
 
         for (const [j, edges] of doubleAdjacencyGraph.edges[i].entries()) {
-            const p2 = doubleAdjacencyGraph.vertices[j].pos;
+            const v2 = doubleAdjacencyGraph.vertices[j];
+            const p2 = v2.pos;
 
             if (edges.length === 0) {
                 // No ij edges - ignore
@@ -209,8 +202,6 @@ function getTikzVertexLabelPlacementAngles(graph: Graph,
     }
 
     const sortedAngles = allAngles.map(arr => arr.sort());
-
-    console.log(sortedAngles.map(arr => arr.map(radiansToDegrees)));
     return sortedAngles.map(bestFittingAngle);
 }
 
@@ -248,9 +239,17 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
 
                 const xshift = weightShift.xshift.toFixed(NUM_DIGITS);
                 const yshift = weightShift.yshift.toFixed(NUM_DIGITS);
-                
-                edgeStr += " node[xshift=" + xshift + "pt,"
-                        +  "yshift=" + yshift + "pt]";
+
+                // For multiedges, draw the second half of edges (inclusive)
+                // on the opposite side of the edge
+                const isInSecondHalf = i >= Math.ceil(edges.length / 2);
+                if (isInSecondHalf) {
+                    edgeStr += " node[xshift=" + (-xshift) + "pt,"
+                            +  "yshift=" + (-yshift) + "pt]";
+                } else {
+                    edgeStr += " node[xshift=" + xshift + "pt,"
+                            +  "yshift=" + yshift + "pt]";
+                }
 
                 const weightLabel = settings.textFormat === "MATH" ?
                     '$' + edgeInfo.edge.weight + '$' : edgeInfo.edge.weight;
@@ -284,10 +283,26 @@ function getTikzEdgeBends(edges: Edge[], settings: TikzExportSettings): number[]
     } else if (numEdges == 1) {
         return [0]
     } else {
-        const base = 8;
+        const base = 15;
+        const perChar = 8;
         const maxLength = Math.max(...edges.map(e => e.weight.length));
-        const angleDiff = base + numEdges*4*maxLength
-        const maxBend = squeeze(angleDiff, 15, 90);
+        let maxBend;
+
+        if (settings.edgeWeightStyle === "INSIDE"
+            && settings.slopedEdgeWeight) {
+            // Sloped weights, inside edges
+            const angleDiff = base + numEdges * 8;
+            maxBend = squeeze(angleDiff, 15, 90);
+        } else if (settings.edgeWeightStyle === "INSIDE") {
+            // Non-sloped weights, inside edges
+            const angleDiff = base + (numEdges * (perChar/2) * maxLength)
+            maxBend = squeeze(angleDiff, 15, 90);
+        } else {
+            // Non-sloped weights, outside edges
+            const angleDiff = base + (numEdges * perChar * maxLength)
+            maxBend = squeeze(angleDiff, 15, 90);
+        }
+
         return getNBetween(-maxBend, maxBend, numEdges);
     }
 }
@@ -304,7 +319,7 @@ function getTikzEdgeWeightShift(v1: Vertex, v2: Vertex,
     edge: Edge, settings: TikzExportSettings
 ): { xshift: number, yshift: number } {
     // Minimum distance away from an edge that weight should be
-    const BASE_MAGNITUDE = 9;
+    const BASE_MAGNITUDE = 5;
 
     if (settings.edgeWeightStyle === "INSIDE") {
         return { xshift: 0, yshift: 0 };
@@ -318,7 +333,7 @@ function getTikzEdgeWeightShift(v1: Vertex, v2: Vertex,
     const perpendicularAngle = (angle + Math.PI/2) % (2 * Math.PI);
 
     // Get distance from middle of edge for edge weight
-    const LENGTH_MULTIPLIER = 1.5;
+    const LENGTH_MULTIPLIER = 2.2;
     const c = getDistanceScalar(v1.pos, v2.pos);
     const magnitude = BASE_MAGNITUDE 
                     + (edge.weight.length * LENGTH_MULTIPLIER) * c;
