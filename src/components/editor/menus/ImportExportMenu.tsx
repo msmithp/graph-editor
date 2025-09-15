@@ -1,13 +1,26 @@
 interface ImportExportMenuProps {
-    onExportTikz: () => void;
+    onExportTikz: () => void,
+    onExportJson: () => void,
+    onImportJson: () => void
 }
 
-function ImportExportMenu({ onExportTikz }: ImportExportMenuProps) {
+function ImportExportMenu({ onExportTikz, onExportJson, 
+    onImportJson }: ImportExportMenuProps) {
     return (
         <div className="menuTab">
-            <button onClick={onExportTikz}>
-                Export to TikZ
-            </button>
+            <div>
+                <button onClick={onExportJson}>
+                    Download JSON
+                </button>
+                <button onClick={onImportJson}>
+                    Import JSON
+                </button>
+            </div>
+            <div>
+                <button onClick={onExportTikz}>
+                    Export to TikZ
+                </button>
+            </div>
         </div>
     );
 }

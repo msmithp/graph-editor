@@ -398,3 +398,30 @@ export function fromJson(graphJson: GraphJSON): Graph {
         edges: newEdges
     };
 }
+
+/**
+ * Download a graph JSON file
+ * @param json Graph JSON
+ * @param name Name of the JSON file to be downloaded, not including the file
+ *             extension
+ */
+export function downloadJson(json: GraphJSON, name: string): void {
+    // Create blob for JSON file
+    const blob = new Blob([JSON.stringify(json)], {
+        type: "application/json"
+    });
+    const url = window.URL.createObjectURL(blob);
+
+    // Create <a> tag for JSON
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute("download", `${name}.json`);
+    document.body.appendChild(link);
+
+    // Click <a> tag to download JSON file
+    link.click();
+
+    // Remove <a> tag
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
+}

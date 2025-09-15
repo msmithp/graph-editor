@@ -19,37 +19,10 @@ import {
 } from "./menus";
 import { complement, lineGraph } from "../../utils/graphAlgorithms";
 import type { Point2D } from "../../types/Graphics";
-import { toTikz } from "../../utils/ioUtils";
+import { downloadJson, toJson, toTikz } from "../../utils/ioUtils";
 import type { TikzExportSettings } from "../../types/IO";
 import { HEIGHT, WIDTH } from "../../utils/constants";
 
-
-// Placeholder data
-// const vs = [];
-// for (let i = 0; i < 10; i++) {
-//     vs.push({
-//         label: `${i}`,
-//         xpos: Math.random() * 800,
-//         ypos: Math.random() * 800,
-//         color: "#FFFFFF"
-//     });
-// }
-// const edges: Map<number, Edge[]>[] = Array.from(
-//     { length: vs.length }, () => new Map()
-// );
-// edges[0].set(1, [{ weight: "abcde", color: "#00FFAA" }]);
-// edges[1].set(2, [{ weight: "10", color: "#FF11AA" }]);
-// edges[6].set(5, [{ weight: "1", color: "#000000" }, { weight: "2", color: "#000000" },
-//     { weight: "3", color: "#000000" }, { weight: "4", color: "#000000" },
-//     { weight: "5", color: "#000000" }, { weight: "6", color: "#000000" }]);
-// edges[5].set(6, [{ weight: "7", color: "#000000" }, { weight: "8", color: "#000000" },
-//     { weight: "9", color: "#000000" }, { weight: "10", color: "#000000" }]);
-// edges[5].set(2, [{ weight: "", color: "#000000" }]);
-// const placeholderGraph: Graph = {
-//     vertices: vs,
-//     edges: edges
-// };
-// End placeholder data
 
 function Editor() {
     const [graph, setGraph] = useState<Graph>({
@@ -516,18 +489,22 @@ function Editor() {
                     <ImportExportMenu 
                         onExportTikz={() => {
                             const settings: TikzExportSettings = {
-                                vertexStyle: "STANDARD",
+                                vertexStyle: "DOT",
                                 showVertexLabels: true,
-                                edgeWeightStyle: "OUTSIDE",
-                                slopedEdgeWeight: false,
+                                edgeWeightStyle: "INSIDE",
+                                slopedEdgeWeight: true,
                                 isDirected: isDirected,
                                 edgeWidth: 0.4,
                                 textFormat: "MATH",
                                 trimPadding: true,
-                                coordinateScale: 0.02
+                                coordinateScale: 1
                             };
                             console.log(toTikz(graph, settings));
                         }}
+                        onExportJson={() =>
+                             downloadJson(toJson(graph), "graph")
+                        }
+                        onImportJson={() => {}}
                     />
                 </details>
             </div>
