@@ -275,7 +275,8 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
  * @param settings TikZ export settings
  * @returns List of edge bends
  */
-function getTikzEdgeBends(edges: Edge[], settings: TikzExportSettings): number[] {
+function getTikzEdgeBends(edges: Edge[], 
+    settings: TikzExportSettings): number[] {
     const numEdges = edges.length;
 
     if (numEdges == 0) {
@@ -288,14 +289,13 @@ function getTikzEdgeBends(edges: Edge[], settings: TikzExportSettings): number[]
         const maxLength = Math.max(...edges.map(e => e.weight.length));
         let maxBend;
 
-        if (settings.edgeWeightStyle === "INSIDE"
-            && settings.slopedEdgeWeight) {
-            // Sloped weights, inside edges
-            const angleDiff = base + numEdges * 8;
+        if (settings.slopedEdgeWeight) {
+            // Sloped weights
+            const angleDiff = base + numEdges * 9;
             maxBend = squeeze(angleDiff, 15, 90);
         } else if (settings.edgeWeightStyle === "INSIDE") {
             // Non-sloped weights, inside edges
-            const angleDiff = base + (numEdges * (perChar/2) * maxLength)
+            const angleDiff = base + (numEdges * (perChar/2) * maxLength);
             maxBend = squeeze(angleDiff, 15, 90);
         } else {
             // Non-sloped weights, outside edges
@@ -356,11 +356,45 @@ export function fromVertexEdgeList(list: string): Graph {
 
 }
 
+/**
+ * Convert a graph into an object which is JSON-serializable
+ * @param graph Graph
+ * @returns JSON-serializable representation of graph
+ */
 export function toJson(graph: Graph): GraphJSON {
+    const newEdges = graph.edges.map(edgeMap => {
+        const adjacencies: {[destination: number]: Edge[]} = {};
+        for (const [j, edges] of edgeMap.entries()) {
+            adjacencies[j] = edges;
+        }
+        return adjacencies;
+    });
 
+    return {
+        vertices: graph.vertices,
+        edges: newEdges
+    };
 }
 
+/**
+ * Convert a graph JSON to a standard graph representation
+ * @param graphJson Graph JSON
+ * @returns Standard graph
+ */
 export function fromJson(graphJson: GraphJSON): Graph {
+    const newEdges: Map<number, Edge[]>[] = graphJson.edges.map(adj => {
+        const map = new Map<number, Edge[]>();
 
+        for (const [destination, edges] of Object.entries(adj)) {
+            const key = Number(destination);
+            map.set(key, edges);
+        }
+
+        return map;
+    });
+
+    return {
+        vertices: graphJson.vertices,
+        edges: newEdges
+    };
 }
-

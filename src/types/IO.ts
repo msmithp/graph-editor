@@ -35,8 +35,6 @@ export interface TikzExportSettings {
 export interface GraphJSON {
     vertices: Vertex[],
     edges: {
-        source: Vertex,
-        destination: Vertex,
-        edge: Edge
+        [destination: number]: Edge[]
     }[]
 }
