@@ -19,7 +19,7 @@ import {
 } from "./menus";
 import { complement, lineGraph } from "../../utils/graphAlgorithms";
 import type { Point2D } from "../../types/Graphics";
-import { downloadJson, toJson, toTikz } from "../../utils/ioUtils";
+import { downloadJson, fromJson, toJson, toTikz } from "../../utils/ioUtils";
 import type { TikzExportSettings } from "../../types/IO";
 import { HEIGHT, WIDTH } from "../../utils/constants";
 
@@ -502,9 +502,15 @@ function Editor() {
                             console.log(toTikz(graph, settings));
                         }}
                         onExportJson={() =>
-                             downloadJson(toJson(graph), "graph")
+                            downloadJson(toJson(graph), "graph")
                         }
-                        onImportJson={() => {}}
+                        onImportJson={(json) => {
+                            if (json !== null) {
+                                setGraph(fromJson(json));
+                            } else {
+                                console.error("Error reading graph JSON");
+                            }
+                        }}
                     />
                 </details>
             </div>

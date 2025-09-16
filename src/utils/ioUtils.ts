@@ -402,10 +402,10 @@ export function fromJson(graphJson: GraphJSON): Graph {
 /**
  * Download a graph JSON file
  * @param json Graph JSON
- * @param name Name of the JSON file to be downloaded, not including the file
- *             extension
+ * @param fileName Name of the JSON file to be downloaded, not including the
+ *                 file extension
  */
-export function downloadJson(json: GraphJSON, name: string): void {
+export function downloadJson(json: GraphJSON, fileName: string): void {
     // Create blob for JSON file
     const blob = new Blob([JSON.stringify(json)], {
         type: "application/json"
@@ -415,7 +415,7 @@ export function downloadJson(json: GraphJSON, name: string): void {
     // Create <a> tag for JSON
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute("download", `${name}.json`);
+    link.setAttribute("download", `${fileName}.json`);
     document.body.appendChild(link);
 
     // Click <a> tag to download JSON file
