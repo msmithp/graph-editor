@@ -19,8 +19,7 @@ import {
 } from "./menus";
 import { complement, lineGraph } from "../../utils/graphAlgorithms";
 import type { Point2D } from "../../types/Graphics";
-import { downloadJson, fromJson, toJson, toTikz } from "../../utils/ioUtils";
-import type { TikzExportSettings } from "../../types/IO";
+import { downloadJson, fromJson, toJson } from "../../utils/ioUtils";
 import { HEIGHT, WIDTH } from "../../utils/constants";
 
 
@@ -487,20 +486,7 @@ function Editor() {
                 <details>
                     <summary>Import/Export</summary>
                     <ImportExportMenu 
-                        onExportTikz={() => {
-                            const settings: TikzExportSettings = {
-                                vertexStyle: "DOT",
-                                showVertexLabels: true,
-                                edgeWeightStyle: "INSIDE",
-                                slopedEdgeWeight: true,
-                                isDirected: isDirected,
-                                edgeWidth: 0.4,
-                                textFormat: "MATH",
-                                trimPadding: true,
-                                coordinateScale: 1
-                            };
-                            console.log(toTikz(graph, settings));
-                        }}
+                        graph={graph}
                         onExportJson={() =>
                             downloadJson(toJson(graph), "graph")
                         }
