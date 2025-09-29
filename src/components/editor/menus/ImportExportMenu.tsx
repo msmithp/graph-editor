@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import type { GraphJSON, TikzExportSettings } from "../../../types/IO";
 import { toTikz } from "../../../utils/ioUtils";
 import type { Graph } from "../../../types/Graph";
+import "../../../style/ImportExportMenu.css";
 
 interface ImportExportMenuProps {
     graph: Graph,

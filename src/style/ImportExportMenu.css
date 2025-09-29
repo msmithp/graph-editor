@@ -1,0 +1,10 @@
+dialog {
+    width: 50%;
+}
+
+textarea {
+    width: 80%;
+    height: 200px;
+    overflow: scroll;
+    resize: none;
+}
