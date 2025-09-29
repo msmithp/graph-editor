@@ -1,3 +1,7 @@
+// SVG canvas size
+export const WIDTH = 800;
+export const HEIGHT = 800;
+
 export const VERTEX_RADIUS = 15;
 
 // Edge width
@@ -10,4 +14,4 @@ export const ARROW_HEIGHT = 15;
 
 // Rough width and height of characters in this font
 export const CHAR_WIDTH = 8.5;
-export const CHAR_HEIGHT = 5;
+export const CHAR_HEIGHT = 10;

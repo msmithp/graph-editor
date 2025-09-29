@@ -1,3 +1,5 @@
+import type { Point2D } from "../types/Graphics";
+
 /**
  * Convert a string to title case, that is, the first letter of each word
  * is capitalized.
@@ -28,13 +30,29 @@ export function roundToBase(x: number, base: number): number {
     return Math.round(x / base) * base;
 }
 
+/**
+ * Force a value between `min` and `max`. That is,
+ * * If `value` is lower than `min`, return `min`
+ * * If `value` is greater than `max`, return `max`
+ * * Otherwise, return `value`
+ * @param value Value to be squeezed
+ * @param min High end of range
+ * @param max Low end of range
+ * @returns Squeezed value
+ */
 export function squeeze(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
 }
 
-export function getSVGPoint(svg: SVGSVGElement, x: number, y: number): 
-    {x: number, y: number} {
-    // Convert client coordinates to SVG coordinates
+/**
+ * Convert SVG coordinates to client coordinates
+ * @param svg SVG element
+ * @param x SVG x-coordinate
+ * @param y SVG y-coordinate
+ * @returns Client coordinates
+ */
+export function getSVGPoint(svg: SVGSVGElement, x: number,
+    y: number): Point2D {
     const invCTM = svg.getScreenCTM()!.inverse();
     const pt = svg.createSVGPoint();
     pt.x = x;
@@ -103,4 +121,152 @@ export function outsideInIndices(length: number): number[] {
     }
 
     return indices;
+}
+
+/**
+ * Check if any values exist in `nums` within the range `low`-`high`, inclusive
+ * @param nums List of numbers
+ * @param low Low end of range
+ * @param high High end of range
+ * @returns `true` if `nums` contains any element between `low` and `high`,
+ *          `false` otherwise
+ */
+export function binaryRangeSearch(nums: number[], low: number,
+    high: number): boolean {
+    // Binary search for number between low and high
+    const idx = binarySearch(nums, (low + high) / 2, compareNumbers);
+
+    if (idx >= 0) {
+        // Positive index means the exact number between low and high is in the
+        // list, which is obviously between low and high
+        return true;
+    }
+
+    const wouldBeIdx = (idx + 1) * -1;
+    
+    if (wouldBeIdx === 0) {
+        return nums[0] <= high;
+    }
+
+    if (nums[wouldBeIdx-1] >= low || nums[wouldBeIdx] <= high) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Perform a binary search to find the index of an element in a sorted array.
+ * Based on Alexander Ryzhov's answer: https://stackoverflow.com/a/29018745
+ * @param nums Sorted array
+ * @param key Element being searched for
+ * @param compare Comparison function for elements of array
+ * @returns If `key` is found, then the index of `key` is returned. Otherwise,
+ *          for the index `i` at which `key` would have been, `-i - 1` will be
+ *          returned.
+ */
+export function binarySearch<T>(arr: T[], key: T,
+    compare: (a: T, b: T) => number): number {
+    let lo = 0;
+    let hi = arr.length - 1;
+
+    while (lo <= hi) {
+        let mid = Math.floor((lo + hi) / 2);
+        let cmp = compare(key, arr[mid]);
+
+        if (cmp > 0) {
+            // Key is greater than element at mid
+            lo = mid + 1;
+        } else if (cmp < 0) {
+            // Key is less than element at mid
+            hi = mid - 1;
+        } else {
+            // Key found
+            return mid;
+        }
+    }
+
+    return -lo - 1;
+}
+
+/**
+ * Compare two numbers
+ * @param num1 First number
+ * @param num2 Second number
+ * @returns The difference between `num1` and `num2`. That is,
+ *          * A positive number, if `num1 > num2`
+ *          * A negative number, if `num1 < num2`
+ *          * 0, if `num1 == num2`
+ */
+function compareNumbers(num1: number, num2: number): number {
+    return num1 - num2;
+}
+
+/**
+ * Convert a hex value string (like `"#F369D2"`) to an array of
+ * RGB values (like `[243, 105, 210]`)
+ * @param hex A hex code of a color. The leading pound sign (`#`) should be
+ *            included.
+ * @returns An array of exactly 3 integers, each between 0 and 255,
+ *          representing red, green, and blue values, respectively
+ */
+export function hexToRgb(hex: string): number[] {
+    return [
+        parseInt(hex.substring(1, 3), 16),
+        parseInt(hex.substring(3, 5), 16),
+        parseInt(hex.substring(5, 7), 16),
+    ];
+}
+
+/**
+ * Convert an array of RGB values (like `[243, 105, 210]`) to a hex code (like
+ * `"#F369D2"`)
+ * @param vals An array of exactly 3 integers, each between 0 and 255,
+ *             representing red, green, and blue values, respectively
+ * @returns A hex code of a color, including a leading pound sign (`#`)
+ */
+export function rgbToHex(vals: number[]): string {
+    let hex = "#";
+
+    for (const val of vals) {
+        // Convert value to a hexadecimal string
+        let hexVal = val.toString(16);
+
+        if (hexVal.length === 1) {
+            // Add leading 0, if necessary
+            hexVal = "0" + hexVal;
+        }
+        
+        hex += hexVal;
+    }
+
+    return hex;
+}
+
+/**
+ * Get an array with `n` equally-spaced numbers between `low` and `high`
+ * @param low Low end of range
+ * @param high High end of range
+ * @param n Number of values in resulting array
+ * @param inclusive If `true`, include both `low` and `high` in resulting array
+ *                  (except for when `n=1`, in which case the average of `low`
+ *                  and `high` is returned)
+ * @returns Array with `n` numbers between `low` and `high`
+ */
+export function getNBetween(low: number, high: number, n: number,
+    inclusive: boolean = true): number[] {
+    if (n === 1) {
+        return inclusive ? [(high + low) / 2] : [low];
+    }
+
+    const range = high - low;
+    const between = inclusive ? range / (n-1) : range / n;
+
+    const nums = new Array(n);
+
+    for (let i = 0; i < n; i++) {
+        nums[i] = low + (i * between);
+    }
+
+    return nums;
 }

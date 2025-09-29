@@ -1,7 +1,9 @@
-import type { Edge, Vertex } from "../types/Graph";
+import type { Edge, Graph, Vertex } from "../types/Graph";
 import type { Point2D } from "../types/Graphics";
 import { ARROW_WIDTH, ARROW_HEIGHT, VERTEX_RADIUS,
     CHAR_WIDTH, CHAR_HEIGHT } from "./constants";
+import { createDoubleAdjacencyGraph } from "./graphUtils";
+import { binaryRangeSearch } from "./utils";
 
 /**
  * Get the midpoint between two vertices
@@ -10,10 +12,7 @@ import { ARROW_WIDTH, ARROW_HEIGHT, VERTEX_RADIUS,
  * @returns Midpoint between `v1` and `v2` as x- and y-coordinates
  */
 export function getEdgeMidpoint(v1: Vertex, v2: Vertex): Point2D {
-    return getMidpoint(
-        { x: v1.xpos, y: v1.ypos },
-        { x: v2.xpos, y: v2.ypos }
-    );
+    return getMidpoint(v1.pos, v2.pos);
 }
 
 /**
@@ -115,9 +114,9 @@ export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex,
         throw new Error("Must have at least two edges");
     }
 
-    if (v1.xpos === v2.xpos && v1.ypos === v2.ypos) {
+    if (v1.pos.x === v2.pos.x && v1.pos.y === v2.pos.y) {
         // If vertices overlap, hide edges
-        return new Array(numEdges).fill({ x: v1.xpos, y: v1.ypos })
+        return new Array(numEdges).fill(v1.pos)
     }
 
     // Get length of longest weight string
@@ -137,29 +136,29 @@ export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex,
     // Start by getting midpoint between the two vertices
     const midpoint = getEdgeMidpoint(v1, v2);
 
-    if (v1.ypos === v2.ypos) {
+    if (v1.pos.y === v2.pos.y) {
         // To avoid division by 0, if the two vertices are at the same
         // y-position, return early. Switch order of midpoint y-coordinates
         // based on the x-coordinates of the vertices to maintain correct
         // drawing order.
-        if (v1.xpos >= v2.xpos) {
+        if (v1.pos.x >= v2.pos.x) {
             return getNPointsOnLine(
-                midpoint.x, midpoint.y + distanceFromMid,
-                midpoint.x, midpoint.y - distanceFromMid,
+                { x: midpoint.x, y: midpoint.y + distanceFromMid },
+                { x: midpoint.x, y: midpoint.y - distanceFromMid},
                 numEdges
             );
         } else {
             return getNPointsOnLine(
-                midpoint.x, midpoint.y - distanceFromMid,
-                midpoint.x, midpoint.y + distanceFromMid,
+                { x: midpoint.x, y: midpoint.y - distanceFromMid},
+                { x: midpoint.x, y: midpoint.y + distanceFromMid },
                 numEdges
             );
         }
     }
 
     // Get negative inverse of slope as a vector
-    const rise = v2.ypos - v1.ypos;
-    const run = v2.xpos - v1.xpos;
+    const rise = v2.pos.y - v1.pos.y;
+    const run = v2.pos.x - v1.pos.x;
     const invSlopeVector = [rise, -run];
 
     // Normalize negative inverse of slope to get unit vector
@@ -184,8 +183,8 @@ export function getMultiEdgeMidpoints(v1: Vertex, v2: Vertex,
 
     // Get points between leftmost and rightmost points
     return getNPointsOnLine(
-        left[0], left[1],
-        right[0], right[1],
+        { x: left[0], y: left[1] },
+        { x: right[0], y: right[1]},
         numEdges
     );
 }
@@ -207,22 +206,19 @@ interface ArrowPoints {
  */
 export function getDirectedEdgeArrowPoints(source: Vertex, 
     destination: Vertex): ArrowPoints {
-    if (source.xpos === destination.xpos
-        && source.ypos === destination.ypos) {
+    if (source.pos.x === destination.pos.x
+        && source.pos.y === destination.pos.y) {
         // Return coordinates of first point to avoid division by 0
-        const default_coords = { x: source.xpos, y: source.ypos };
+        const defaultCoords = source.pos;
         return {
-            left: default_coords,
-            right: default_coords,
-            middle: default_coords
+            left: defaultCoords,
+            right: defaultCoords,
+            middle: defaultCoords
         };
     }
 
     const arrowTipPoint = getDirectedEdgeArrowTipPoint(source, destination);
-    return getArrowPointsOnLine(
-        { x: source.xpos, y: source.ypos },
-        arrowTipPoint
-    );
+    return getArrowPointsOnLine(source.pos, arrowTipPoint);
 }
 
 /**
@@ -239,8 +235,7 @@ function getDirectedEdgeArrowTipPoint(source: Vertex,
     // source to be the second point so that we are basing the distance
     // traveled on the position of the destination vertex, which is where the
     // arrow will be drawn
-    return getPointOnLine(destination.xpos, destination.ypos,
-        source.xpos, source.ypos, VERTEX_RADIUS);
+    return getPointOnLine(destination.pos, source.pos, VERTEX_RADIUS);
 }
 
 /**
@@ -264,8 +259,7 @@ function getArrowPointsOnLine(p1: Point2D, p2: Point2D): ArrowPoints {
     }
 
     const arrowTipPoint = p2;
-    const arrowBasePoint = getPointOnLine(p2.x, p2.y, p1.x, p1.y,
-        ARROW_HEIGHT);
+    const arrowBasePoint = getPointOnLine(p2, p1, ARROW_HEIGHT);
     
     if (p1.y === p2.y) {
         // To avoid division by 0, if the two vertices are at the same
@@ -344,8 +338,7 @@ export function getBezierArrowPoints(p0: Point2D, p1: Point2D,
     const EPSILON = 0.1
 
     const B = createQuadraticBezierFunction(p0, p1, p2);
-    const t = getTFromPoint(B, { x: p2.x, y: p2.y },
-        VERTEX_RADIUS, EPSILON);
+    const t = getTDistanceFromEndpoint(B, VERTEX_RADIUS, EPSILON);
     const arrowLineStart = getBezierSecantPointFromT(B, t);
     const arrowLineEnd = B(t);
 
@@ -355,30 +348,27 @@ export function getBezierArrowPoints(p0: Point2D, p1: Point2D,
 /**
  * Calculate the coordinates of a point that is on the line between two other
  * points, some distance away from the first point
- * @param x1 x-coordinate of first point
- * @param y1 y-coordinate of first point
- * @param x2 x-coordinate of second point
- * @param y2 y-coordinate of second point
+ * @param p1 First point
+ * @param p2 Second point
  * @param distance Distance from the first point that the returned point will
  *                 be
  * @returns x- and y-coordinates of the point that is `distance` units away
  *          from the first point
  */
-function getPointOnLine(x1: number, y1: number, 
-    x2: number, y2: number, distance: number) {
+function getPointOnLine(p1: Point2D, p2: Point2D, distance: number): Point2D {
     // Throughout this function, we think of the coordinates of the source and
     // destination points as 2D vectors. First, we get the norm of the vector
     // that results from subtracting the destination vector from the source
     // vector.
     const norm = vectorNorm([
-        x2 - x1,
-        y2 - y1
+        p2.x - p1.x,
+        p2.y - p1.y
     ]);
 
     // Next, we divide the difference vector by the norm to normalize it.
     const unitVector = vectorDivide([
-        x2 - x1,
-        y2 - y1
+        p2.x - p1.x,
+        p2.y - p1.y
     ], norm);
 
     // Next, we find the vector which represents the point between the source
@@ -389,7 +379,7 @@ function getPointOnLine(x1: number, y1: number,
     //      * d is the distance we want to move away from the destination point
     //      * u is the unit vector
     const middleVector = vectorAdd(
-        [x1, y1],
+        [p1.x, p1.y],
         vectorMultiply(unitVector, distance)
     );
 
@@ -404,33 +394,30 @@ function getPointOnLine(x1: number, y1: number,
 /**
  * Calculate the coordinates of n equidistant points on the line between two
  * other points
- * @param x1 x-coordinate of first point
- * @param y1 y-coordinate of first point
- * @param x2 x-coordinate of second point
- * @param y2 y-coordinate of second point
+ * @param p1 First point
+ * @param p2 Second point
  * @param n Number of points to find on the line
  * @returns Array of length `n` consisting of x- and y-coordinates of points
  *          on the line
  */
-function getNPointsOnLine(x1: number, y1: number, x2: number, y2: number,
-    n: number): Point2D[] {
+function getNPointsOnLine(p1: Point2D, p2: Point2D, n: number): Point2D[] {
     if (n < 2) {
         throw new Error("Must have at least two points");
     }
 
     // Points are equidistant, where `sep` is the amount of space between them
-    const totalLength = distance(x1, y1, x2, y2);
+    const totalLength = distance(p1, p2);
     const sep = totalLength / (n-1);
 
     // Get unit vector from first point to second
     const norm = vectorNorm([
-        x2 - x1,
-        y2 - y1
+        p2.x - p1.x,
+        p2.y - p1.y
     ]);
 
     const unitVector = vectorDivide([
-        x2 - x1,
-        y2 - y1
+        p2.x - p1.x,
+        p2.y - p1.y
     ], norm);
 
     // Create array of points
@@ -438,7 +425,7 @@ function getNPointsOnLine(x1: number, y1: number, x2: number, y2: number,
     for (let i = 0; i < n; i++) {
         // Get point that is `i` * `sep` units from the first point
         const pt = vectorAdd(
-            [x1, y1],
+            [p1.x, p1.y],
             vectorMultiply(unitVector, i*sep)
         );
 
@@ -453,14 +440,12 @@ function getNPointsOnLine(x1: number, y1: number, x2: number, y2: number,
 
 /**
  * Get the distance between two points
- * @param x1 x-coordinate of first point
- * @param y1 y-coordinate of first point
- * @param x2 x-coordinate of second point
- * @param y2 y-coordinate of second point
+ * @param p1 First point
+ * @param p2 Second point
  * @returns Distance between points
  */
-function distance(x1: number, y1: number, x2: number, y2: number): number {
-    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+function distance(p1: Point2D, p2: Point2D): number {
+    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 }
 
 /**
@@ -553,16 +538,16 @@ function createQuadraticBezierFunction(p0: Point2D, p1: Point2D, p2: Point2D):
 
 /**
  * Approximate the value of `t` for which `B(t)` is `dist` units away from
- * `pt`, within `epsilon` units
+ * the endpoint `B(1)`, within `epsilon` units
  * @param B Quadratic Bezier function, which takes a value `t` between 0 and 1
  *          as input and outputs a point on the plane
- * @param pt Point on the plane
  * @param dist Distance between `B(t)` and `pt`
  * @param epsilon Tolerance for `dist`
  * @returns Value of `t` for which `B(t)` is `dist` units away from `pt`
  */
-function getTFromPoint(B: (t: number) => Point2D, pt: Point2D, dist: number,
+function getTDistanceFromEndpoint(B: (t: number) => Point2D, dist: number,
     epsilon: number): number {
+    const pt = B(1);
     const MAX_ITERATIONS = 20;
     let hi = 1;
     let lo = 0;
@@ -573,9 +558,8 @@ function getTFromPoint(B: (t: number) => Point2D, pt: Point2D, dist: number,
     // iteration until `B(t)` is `dist` units away from `pt`, within `epsilon`
     for (let i = 0; i < MAX_ITERATIONS; i++) {
         t = (hi + lo) / 2;
-        // console.log(`i=${i}\thi=${hi}\tlo=${lo}\thi-lo=${hi-lo}\tt=${t}`);
         const bezierPt = B(t);
-        const currentDistance = distance(bezierPt.x, bezierPt.y, pt.x, pt.y);
+        const currentDistance = distance(bezierPt, pt);
 
         if (Math.abs(currentDistance - dist) <= epsilon) {
             // Distance between `B(t)` and `pt` is within `epsilon` of
@@ -630,11 +614,8 @@ export function getQuadraticBezierMidpoint(p0: Point2D, p1: Point2D,
  */
 export function getEdgeWeightLocation(source: Vertex,
     destination: Vertex, weight: string): Point2D {
-    return getEdgeWeightLocationFromPoints(
-        { x: source.xpos, y: source.ypos },
-        { x: destination.xpos, y: destination.ypos },
-        weight
-    );
+    return getEdgeWeightLocationFromPoints(source.pos, destination.pos, 
+        weight);
 }
 
 /**
@@ -656,14 +637,10 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
     // Padding added between edge weight and edge line
     const PADDING = 10;
 
-    // Using the angle between p1 and p2, get a constant `c` between 0 and 1
-    // such that c = 0 when p1 and p2 are at the same y-value and c = 1 when
-    // p1 and p2 are at the same x-value. This ensures that no distance is
-    // placed between the text and the edge when the edge line is horizontal,
-    // and maximum distance is placed between the text and the edge when the
-    // edge line is vertical.
-    const theta = radiansToDegrees(angleBetweenPoints(p1, p2));
-    const c = Math.sin(degreesToRadians(theta % 180));
+    // Distance scalar, which ensures that no distance is placed between the
+    // text and the edge when the edge line is horizontal, and maximum distance
+    // is placed between the text and the edge when the edge line is vertical
+    const c = getDistanceScalar(p1, p2);
 
     // Distance away from the edge that the text should be
     const dist = (textWidth / 2) * c;
@@ -671,17 +648,27 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
     const midpoint = getMidpoint(p1, p2);
     const perpendicularPoint = getPerpendicularPoint(p1, midpoint);
     
-    const weightPt = getPointOnLine(
-        midpoint.x, midpoint.y,
-        perpendicularPoint.x, perpendicularPoint.y,
-        dist + PADDING
-    );
+    const weightPt = getPointOnLine(midpoint, perpendicularPoint,
+        dist + PADDING);
 
     // Vertical offset to account for the fact that the "anchor" of the text
     // object is at the bottom of the text rather than the middle
-    weightPt.y += CHAR_HEIGHT;
+    weightPt.y += CHAR_HEIGHT/2;
 
     return weightPt;
+}
+
+/**
+ * Using the angle between p1 and p2, get a constant `c` between 0 and 1
+ * such that c = 0 when p1 and p2 are at the same y-value and c = 1 when
+ * p1 and p2 are at the same x-value.
+ * @param p1 First point
+ * @param p2 Second point
+ * @returns Value between 0 and 1
+ */
+export function getDistanceScalar(p1: Point2D, p2: Point2D): number {
+    const theta = angleBetweenPoints(p1, p2);
+    return Math.sin(theta % (Math.PI));
 }
 
 /**
@@ -689,7 +676,7 @@ function getEdgeWeightLocationFromPoints(p1: Point2D, p2: Point2D,
  * @param radians Radian value
  * @returns Equivalent value in degrees
  */
-function radiansToDegrees(radians: number): number {
+export function radiansToDegrees(radians: number): number {
     return radians * (180 / Math.PI);
 }
 
@@ -698,8 +685,21 @@ function radiansToDegrees(radians: number): number {
  * @param degrees Degree value
  * @returns Equivalent value in radians
  */
-function degreesToRadians(degrees: number): number {
+export function degreesToRadians(degrees: number): number {
     return degrees * (Math.PI / 180);
+}
+
+/**
+ * Get the angle between two vertices, in radians between 0 and 2pi
+ * @param v1 First vertex
+ * @param v2 Second vertex
+ * @param isYAxisInverted `true` if y-value increases from top to bottom,
+ *                        `false` if y-value increases from bottom to top
+ * @returns Angle between `v1` and `v2`
+ */
+export function angleBetweenVertices(v1: Vertex, v2: Vertex,
+    isYAxisInverted: boolean = true): number {
+    return angleBetweenPoints(v1.pos, v2.pos, isYAxisInverted);
 }
 
 /**
@@ -707,18 +707,27 @@ function degreesToRadians(degrees: number): number {
  * line `y = y1` and the point `(x2, y2)`, in radians
  * @param p1 First point `(x1, y1)`
  * @param p2 Second point `(x2, y2)`
+ * @param isYAxisInverted `true` if y-value increases from top to bottom,
+ *                        `false` if y-value increases from bottom to top
  * @returns Angle between `p1` and `p2`
  */
-function angleBetweenPoints(p1: Point2D, p2: Point2D): number {
+export function angleBetweenPoints(p1: Point2D, p2: Point2D,
+    isYAxisInverted: boolean = true): number {
     const x = p2.x - p1.x;
-    // Subtract p2.y from p1.y since y value increases as point gets lower,
-    // not higher
-    const y = p1.y - p2.y;
+    const y = isYAxisInverted ? p1.y - p2.y : p2.y - p1.y;
+
+    if (y === 0 && x === 0) {
+        // Default to 0 rad
+        return 0;
+    }
+
     const theta = Math.atan2(y, x);
 
     if (theta < 0) {
         // Convert negative angle to value between 0 and 2 * pi
         return 2 * Math.PI + theta;
+        //                 ↑
+        //     plus, since theta is negative
     } else {
         return theta;
     }
@@ -735,12 +744,8 @@ function angleBetweenPoints(p1: Point2D, p2: Point2D): number {
  */
 export function getMultiEdgeWeightLocations(v1: Vertex, v2: Vertex,
     weights: string[], controlPts: Point2D[]): Point2D[] {
-    return getMultiEdgeWeightLocationsFromPoints(
-        { x: v1.xpos, y: v1.ypos },
-        { x: v2.xpos, y: v2.ypos },
-        weights,
-        controlPts
-    );
+    return getMultiEdgeWeightLocationsFromPoints(v1.pos, v2.pos, weights, 
+        controlPts);
 }
 
 /**
@@ -768,7 +773,8 @@ function getMultiEdgeWeightLocationsFromPoints(p1: Point2D, p2: Point2D,
         const B = createQuadraticBezierFunction(p1, controlPts[i], p2);
         const firstPt = B(0.5 - EPSILON);
         const secondPt = B(0.5 + EPSILON);
-        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt, secondPt, weights[i]);
+        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt,
+            secondPt, weights[i]);
     }
 
     // Weights for second half of points are drawn clockwise
@@ -776,8 +782,265 @@ function getMultiEdgeWeightLocationsFromPoints(p1: Point2D, p2: Point2D,
         const B = createQuadraticBezierFunction(p1, controlPts[i], p2);
         const firstPt = B(0.5 + EPSILON);
         const secondPt = B(0.5 - EPSILON);
-        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt, secondPt, weights[i]);
+        weightPts[i] = getEdgeWeightLocationFromPoints(firstPt,
+            secondPt, weights[i]);
     }
 
     return weightPts;
+}
+
+/**
+ * For each vertex of a graph, get the optimal angle at which the vertex's
+ * label can be drawn, in radians
+ * @param graph Graph
+ * @returns List of optimal label placement angles (in radians)
+ */
+export function getVertexLabelPlacementAngles(graph: Graph): number[] {
+    // Get angles of all incoming and outgoing edges of vertices, sorted in
+    // ascending order
+    const edgeAngles = getVertexEdgeAngles(graph).map(arr => arr.sort());
+
+    // Return best fitting angle for each vertex
+    return edgeAngles.map(bestFittingAngle);
+}
+
+/**
+ * For each vertex `v` of a graph, generate a list of angles between each
+ * edge incident with `v` and the line `y = v.ypos`, in radians
+ * @param graph Graph
+ * @returns List of angles (in radians) for each vertex of `graph`
+ */
+function getVertexEdgeAngles(graph: Graph): number[][] {
+    // Create double-adjacency graph in order to view all edges incident with
+    // a given vertex in constant time
+    const doubleAdjacencyGraph = createDoubleAdjacencyGraph(graph);
+    const allAngles: number[][] = new Array(
+        doubleAdjacencyGraph.vertices.length
+    );
+
+    for (let i = 0; i < doubleAdjacencyGraph.vertices.length; i++) {
+        const p1 = doubleAdjacencyGraph.vertices[i].pos;
+        const angles = [];
+
+        for (const [j, edges] of doubleAdjacencyGraph.edges[i].entries()) {
+            const p2 = doubleAdjacencyGraph.vertices[j].pos;
+
+            if (edges.length === 0) {
+                // No ij edges - ignore
+                continue;
+            } else if (edges.length === 1) {
+                // One ij edge - get simple angle between points
+                angles.push(angleBetweenPoints(p1, p2, false));
+            } else {
+                // Many ij edges - calculate approximate angles of Bezier
+                // curves as they exit the vertex. First, get control points
+                // between p1 and p2
+                const controlPts = getMultiEdgeMidpoints(
+                    doubleAdjacencyGraph.vertices[i],
+                    doubleAdjacencyGraph.vertices[j],
+                    edges
+                );
+
+                angles.push(...controlPts.map(c => {
+                    // Create Bezier functions for each edge
+                    const B = createQuadraticBezierFunction(p2, c, p1);
+
+                    // Calculate approximate `t` value for which the Bezier
+                    // function is VERTEX_RADIUS units away from p1
+                    const t = getTDistanceFromEndpoint(B, VERTEX_RADIUS, 0.1);
+
+                    // Get point at B(t)
+                    const intersectionPt = B(t);
+
+                    // Finally, calculate angle between p1 and B(t)
+                    return angleBetweenPoints(p1, intersectionPt);
+                }));
+            }
+        }
+
+        allAngles[i] = angles;
+    }
+
+    return allAngles;
+}
+
+/**
+ * Given a list of angles, get the best fitting angle at which to place a
+ * label. This function tries, in order: 
+ *   * Top (0.5pi)
+ *   * Bottom (1.5pi)
+ *   * Left (pi)
+ *   * Right (0)
+ * 
+ * If all of these angles are obstructed, then the angle furthest from all
+ * other angles is returned.
+ * @param angles Array of angles, measured in radians
+ * @returns Best fitting angle
+ */
+export function bestFittingAngle(angles: number[]): number {
+    const DIFF = (7 * Math.PI) / 36;  // 35 degree tolerance
+
+    // Try top first
+    const TOP = 0.5 * Math.PI;
+    if (!binaryRangeSearch(angles, TOP - DIFF, TOP + DIFF)) {
+        return TOP;
+    }
+
+    // Then try bottom
+    const BOTTOM = 1.5 * Math.PI;
+    if (!binaryRangeSearch(angles, BOTTOM - DIFF, BOTTOM + DIFF)) {
+        return BOTTOM;
+    }
+
+    // Then try left
+    const LEFT = Math.PI;
+    if (!binaryRangeSearch(angles, LEFT - DIFF, LEFT + DIFF)) {
+        return LEFT;
+    }
+
+    // Finally, try right (two separate searches are necessary because
+    // angles are in modulo 2pi)
+    const RIGHT = 0;
+    const RIGHT_FULL = 2 * Math.PI;
+    if (!binaryRangeSearch(angles, RIGHT_FULL - DIFF, RIGHT_FULL)
+        && !binaryRangeSearch(angles, RIGHT, RIGHT + DIFF)) {
+        return RIGHT;
+    }
+
+    // All sides taken - find the angle furthest from the angles of all
+    // incident edges
+    return greatestMinAngleDistance(angles);
+}
+
+/**
+ * Given a list of angles, measured in radians, sorted in non-descending order,
+ * return the angle between 0 and 2pi with the greatest minimum distance from
+ * all angles in the list. Informally, this is the angle farthest from all of
+ * the other angles.
+ * @param angles List of angles, measured in radians
+ * @returns Angle with the greatest minimum distance from the angles in
+ *          `angles`, between 0 and 2pi and measured in radians
+ */
+function greatestMinAngleDistance(angles: number[]): number {
+    // Find the greatest difference between two angles, not counting the
+    // difference between the last and first angle
+    let maxDiff = 0;
+    let maxDiffIdx = 0;
+    for (let i = 0; i < angles.length - 1; i++) {
+        const elem1 = angles[i];
+        const elem2 = angles[i+1];
+        const diff = elem2 - elem1;
+
+        if (diff > maxDiff) {
+            maxDiff = diff;
+            maxDiffIdx = i;
+        }
+    }
+
+    // Check difference between last and first angles, in modulo 2pi
+    const first = angles[0] + 2 * Math.PI;
+    const last = angles[angles.length - 1];
+    if (first - last > maxDiff) {
+        maxDiff = first - last;
+        maxDiffIdx = angles.length - 1;
+    }
+
+    // Return angle in between the two angles with the maximum difference
+    return (angles[maxDiffIdx] + maxDiff/2) % (2 * Math.PI);
+}
+
+/**
+ * Adjust the coordinates of the vertices of a graph such that the vertex with
+ * the minimum x-value has `x=0` and the vertex with the minimum y-value has
+ * `y=0`
+ * @param graph Graph
+ * @returns Graph with trimmed coordinates
+ */
+export function trimPadding(graph: Graph): Graph {
+    if (graph.vertices.length === 0) {
+        return graph;
+    }
+
+    // Get leftmost (minimum) vertex x-position and uppermost (minimum)
+    // vertex y-position
+    let minX = graph.vertices[0].pos.x;
+    let minY = graph.vertices[0].pos.y;
+    for (const v of graph.vertices) {
+        if (v.pos.x < minX) {
+            minX = v.pos.x;
+        }
+
+        if (v.pos.y < minY) {
+            minY = v.pos.y;
+        }
+    }
+
+    // Subtract minimum y-position from each vertex's y-value and
+    // minimum x-position from each vertex's x-value
+    const newVertices = graph.vertices.map(v => ({
+        ...v,
+        pos: {
+            x: v.pos.x - minX,
+            y: v.pos.y - minY
+        }
+    }));
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+/**
+ * Scale the coordinates of the vertices of a graph by a factor
+ * @param graph Graph
+ * @param factor Factor by which vertices will be scaled
+ * @returns Graph with scaled vertex coordinates
+ */
+export function scaleCoordinates(graph: Graph, factor: number): Graph {
+    const newVertices = graph.vertices.map(v => ({
+        ...v,
+        pos: {
+            x: v.pos.x * factor,
+            y: v.pos.y * factor
+        }
+    }));
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
+}
+
+/**
+ * Convert a vector from direction and magnitude form to component form
+ * @param angle Angle in radians measured from the line `y=0`
+ * @param magnitude Magnitude of vector
+ * @returns `x`- and `y`-components of vector
+ */
+export function directionMagnitudeToComponents(angle: number,
+    magnitude: number): Point2D {
+    const x = magnitude * Math.cos(angle);
+    const y = magnitude * Math.sin(angle);
+
+    return { x: x, y: y };
+}
+
+/**
+ * Invert the y-axis of a graph
+ * @param graph Graph
+ * @param maxY Highest possible y-value in coordinate system (i.e., canvas
+ *             height)
+ * @returns Graph with inverted y-axis
+ */
+export function invertYAxis(graph: Graph, maxY: number): Graph {
+    const newVertices = graph.vertices.map(v => ({
+        ...v,
+        pos: { x: v.pos.x, y: maxY - v.pos.y }
+    }));
+
+    return {
+        vertices: newVertices,
+        edges: graph.edges
+    };
 }

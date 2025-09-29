@@ -1,6 +1,10 @@
 import type { Graph } from "../types/Graph";
 
-export function lineGraph(graph: Graph): Graph {
+export function lineGraph(graph: Graph, isDirected: boolean): Graph {
+    if (isDirected) {
+        return directedLineGraph(graph);
+    }
+
     // Convert edges into vertices
     const newVertices = graph.edges.map(e => {
         const midpoint = getEdgeMidpoint(e);
@@ -46,6 +50,10 @@ export function lineGraph(graph: Graph): Graph {
         vertices: newVertices,
         edges: newEdges
     };
+}
+
+function directedLineGraph(graph: Graph): Graph {
+
 }
 
 export function complement(graph: Graph): Graph {

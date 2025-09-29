@@ -30,7 +30,7 @@ function VertexGraphic(
         setOrigin({ x: point.x, y: point.y });
 
         // Set starting position to original location of vertex
-        setStartPos({ x: vertex.xpos, y: vertex.ypos });
+        setStartPos({ x: vertex.pos.x, y: vertex.pos.y });
         setDragging(true);
 
         // Capture all further pointer events on this element
@@ -81,8 +81,8 @@ function VertexGraphic(
         >
             <circle
                 className="vertexCircle"
-                cx={vertex.xpos}
-                cy={vertex.ypos}
+                cx={vertex.pos.x}
+                cy={vertex.pos.y}
                 r={VERTEX_RADIUS}
                 fill={vertex.color}
                 stroke="black"
@@ -90,8 +90,8 @@ function VertexGraphic(
             />
             <text
                 className="vertexLabel"
-                x={vertex.xpos}
-                y={vertex.ypos}
+                x={vertex.pos.x}
+                y={vertex.pos.y}
                 textAnchor="middle"
                 dy=".35em"
                 fontWeight="bold"
