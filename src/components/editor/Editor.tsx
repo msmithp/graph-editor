@@ -329,7 +329,7 @@ function Editor() {
     });
 
     // Set up info and editor for selected vertex/edge, if any
-    let selectedElementEditor = <p>No element selected</p>;
+    let selectedElementEditor = <></>;
     if (selectedVertex !== null) {
         selectedElementEditor = <EditVertexMenu
             vertex={graph.vertices[selectedVertex]}
@@ -378,11 +378,7 @@ function Editor() {
                 </div>
                 <div className="editorWindowGraph">
                     <svg
-                        width={WIDTH} 
-                        height={HEIGHT}
-                        style={{borderColor: "black", 
-                                borderStyle: "solid",
-                                borderRadius: "0.7rem"}}
+                        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
                         onPointerDown={mode === "DRAW_VERTICES" ?
                             onClickSvg : undefined}
                         onMouseMove={mode === "DRAW_EDGES" ?
@@ -492,6 +488,11 @@ function Editor() {
                         }
                         onImportJson={(json) => {
                             if (json !== null) {
+                                // Deselect before loading JSON
+                                setSelectedVertex(null);
+                                setSelectedEdge(null);
+
+                                // Load in JSON
                                 setGraph(fromJson(json));
                             } else {
                                 console.error("Error reading graph JSON");

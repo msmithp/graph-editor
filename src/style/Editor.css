@@ -1,13 +1,39 @@
 .editor {
     display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.editorWindowGraph svg {
     background-color: #FFFFFF;
+    border-color: black;
+    border-style: solid;
+    border-radius: 0.7rem;
+
+    min-width: 200px;
+    width: 80vmin;
+    max-width: 80vh;
+
+    min-height: 200px;
+    height: 80vmin;
+    max-height: 80vh;
 }
 
 .editorWindow {
     display: flex;
     flex-direction: column;
+    color: white;
+}
+
+.editorWindowInfo {
+    height: 28px;
 }
 
 .editorToolbar {
     text-align: left;
+    color: white;
+}
+
+.accordion {
+    color: white;
 }
