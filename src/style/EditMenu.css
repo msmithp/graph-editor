@@ -6,3 +6,8 @@
 .editMenuTop, .editMenuBottom {
     display: flex;
 }
+
+.editMenu input[type=color] {
+    height: 25px;
+    width: 25px;
+}

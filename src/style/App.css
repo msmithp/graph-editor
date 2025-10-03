@@ -1,4 +1,6 @@
-body {
+html, body {
+    --icon-width: 40px;
+
     background-color: #2C2C2C;
     margin: 0 auto;
     height: 100vh;
@@ -7,4 +9,9 @@ body {
 #root {
     margin: 0 auto;
     text-align: center;
+}
+
+input[type=color] {
+    width: var(--icon-width);
+    height: var(--icon-width);
 }

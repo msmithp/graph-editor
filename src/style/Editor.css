@@ -1,22 +1,30 @@
+#root {
+    --bg-color: #3d3d3d;
+    --border-rad: 0.7rem;
+    --editor-margin: 10px;
+}
+
 .editor {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: var(--editor-margin);
+    padding-top: 2vh;
 }
 
-.editorWindowGraph svg {
+.editorWindowGraph {
     background-color: #FFFFFF;
-    border-color: black;
+    border-color: var(--bg-color);
+    border-width: 10px;
     border-style: solid;
-    border-radius: 0.7rem;
+    border-radius: var(--border-rad);
 
-    min-width: 200px;
-    width: 80vmin;
-    max-width: 80vh;
+    min-width: 150px;
+    width: 85vmin;
+    max-width: 85vh;
 
-    min-height: 200px;
-    height: 80vmin;
-    max-height: 80vh;
+    min-height: 150px;
+    height: 85vmin;
+    max-height: 85vh;
 }
 
 .editorWindow {
@@ -26,14 +34,34 @@
 }
 
 .editorWindowInfo {
-    height: 28px;
+    display: flex;
+    align-items: center;
+
+    height: 30px;
+    padding: 0.4rem;
+    margin-bottom: var(--editor-margin);
+    background-color: var(--bg-color);
+    border-radius: var(--border-rad);
 }
 
 .editorToolbar {
     text-align: left;
     color: white;
+    padding: 1rem;
+    background-color: var(--bg-color);
+    border-radius: var(--border-rad);
 }
 
 .accordion {
     color: white;
+    text-align: left;
+    padding: 1rem;
+    width: 250px;
+    background-color: var(--bg-color);
+    border-radius: var(--border-rad);
+    overflow-y: auto;
+}
+
+.accordion summary {
+    user-select: none;
 }

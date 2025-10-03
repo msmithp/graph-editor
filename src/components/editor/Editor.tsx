@@ -441,7 +441,7 @@ function Editor() {
             </div>
 
             {/* Accordion menu sidebar */}
-            <div className="accordion" style={{textAlign: "left"}}>
+            <div className="accordion">
                 <details>
                     <summary>Settings</summary>
                     <SettingsMenu
