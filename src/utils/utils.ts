@@ -270,3 +270,27 @@ export function getNBetween(low: number, high: number, n: number,
 
     return nums;
 }
+
+/**
+ * Create a string by inserting a string delimiter between each item in an
+ * array of strings then concatenating them
+ * @param arr Array of strings
+ * @param delim String delimiter that goes in between each item in `arr`
+ * @returns A string containing the contents of `arr` delimited by `delim`
+ */
+export function intercalate(arr: string[], delim: string): string {
+    const n = arr.length;
+    let result = "";
+
+    for (let i = 0; i < n; i++) {
+        if (i == n - 1) {
+            // Last item - just append item
+            result += arr[i];
+        } else {
+            // Item is not last, so append item and delimiter
+            result += arr[i] + delim
+        }
+    }
+
+    return result;
+}

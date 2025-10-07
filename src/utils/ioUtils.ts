@@ -7,7 +7,7 @@ import {
     invertYAxis, radiansToDegrees, scaleCoordinates, trimPadding
 } from "./graphicsUtils";
 import { createDoubleAdjacencyGraph, getEdgeIterator } from "./graphUtils";
-import { getNBetween, hexToRgb, squeeze } from "./utils";
+import { getNBetween, hexToRgb, intercalate, squeeze } from "./utils";
 
 /** 
  * Number of digits after the decimal place to display for numbers in TikZ
@@ -120,11 +120,7 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
             // If using the dot style, pure white vertices are given no fill
             // so they default to black, making them visible
             if (!(settings.vertexStyle === "DOT" && v.color === "#FFFFFF")) {
-                const rgb = hexToRgb(v.color);
-                const fill = "{rgb,255:red," + rgb[0] + ";"
-                           + "green,"        + rgb[1] + ";"
-                           + "blue,"         + rgb[2] + "}";
-                vertexStr += "fill=" + fill + ',';
+                vertexStr += "fill={" + hexToTikzFill(v.color) + "},";
             }
         }
 
@@ -151,6 +147,21 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
     output += "\t\\end{scope}\n";
 
     return output;
+}
+
+/**
+ * Convert a hex value string (like `"#F369D2"`) to a TikZ fill string (like
+ * `"rgb,255:red,243;green,105;blue,210"`)
+ * @param hex A hex code of a color. The leading pound sign (`#`) should be
+ *            included.
+ * @returns A TikZ fill string
+ */
+function hexToTikzFill(hex: string): string {
+    const rgb = hexToRgb(hex);
+    const fill = "rgb,255:red," + rgb[0] + ";"
+                + "green,"      + rgb[1] + ";"
+                + "blue,"       + rgb[2];
+    return fill;
 }
 
 function getTikzVertexLabelPlacementAngles(graph: Graph,
@@ -229,8 +240,19 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
 
             edgeStr += " (" + v1 + ") edge";
 
+            const modifiers = [];
+
             if (bends.length >= 2) {
-                edgeStr += "[bend right=" + bends[i] + ']';
+                modifiers.push("bend right=" + bends[i]);
+            }
+
+            if (edgeInfo.edge.color !== "#000000") {
+                const color = hexToTikzFill(edgeInfo.edge.color);
+                modifiers.push("color={" + color + "}");
+            }
+
+            if (modifiers.length > 0) {
+                edgeStr += '[' + intercalate(modifiers, ',') + ']';
             }
 
             if (edgeInfo.edge.weight !== "") {
@@ -285,7 +307,7 @@ function getTikzEdgeBends(edges: Edge[],
         return [0]
     } else {
         const base = 15;
-        const perChar = 8;
+        const perChar = 6;
         const maxLength = Math.max(...edges.map(e => e.weight.length));
         let maxBend;
 
