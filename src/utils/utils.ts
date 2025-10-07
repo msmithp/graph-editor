@@ -294,3 +294,88 @@ export function intercalate(arr: string[], delim: string): string {
 
     return result;
 }
+
+/**
+ * Format a decimal number as a string, with up to `maxPlaces` places printed.
+ * @param num Number to be formatted
+ * @param maxPlaces Max number of decimal places to print
+ * @param epsilon
+ * @returns `num` formatted as a string
+ */
+export function formatDecimal(num: number, maxPlaces: number,
+    epsilon: number = 1e-3): string {
+    let places = 0;
+    let tempNum = num;
+
+    // Iterate until the remaining decimal places are "insignificant enough"
+    // to truncate (i.e., at or below epsilon), or the max number of places
+    // have been considered
+    while (places < maxPlaces 
+        && Math.abs(tempNum - Math.round(tempNum)) >= epsilon
+    ) {
+        places += 1;
+        tempNum *= 10;
+    }
+
+    return truncateZeros(num.toFixed(places));
+}
+
+/**
+ * Truncate zeros from a string representation of a floating-point number
+ * @param s String representation of float
+ * @returns String representation of float with trailing zeros removed
+ */
+function truncateZeros(s: string): string {
+    const [integer, fractional] = stringSplit(s, '.');
+    const truncated = truncateChar(fractional, '0');
+
+    if (truncated !== "") {
+        return integer + '.' + truncated;
+    } else {
+        return integer;
+    }
+}
+
+/**
+ * Given a character `c`, truncate a string `s` such that all trailing
+ * instances of `c` in `s` are removed. For example, when `s=123000` and `c=0`,
+ * the resulting string is `123`. If the entire string consists solely of `c`,
+ * then the resulting string is the empty string.
+ * @param s String to be truncated
+ * @param c Character (i.e., string of length 1)
+ * @returns Truncated string
+ */
+function truncateChar(s: string, c: string): string {
+    if (c.length !== 1) {
+        throw new Error("Char to truncate must have length 1");
+    }
+
+    let i = s.length - 1;
+    while (i >= 0 && s[i] === c) {
+        i--;
+    }
+
+    return s.substring(0, i+1);
+}
+
+/**
+ * Split a string `s` at the first instance of the character `c`. `c` will not
+ * be included in either of the resulting strings.
+ * @param s String to be split
+ * @param c Character at which to split `s`
+ * @returns 2-tuple of strings `[s1, s2]` in which `s1` is the substring
+ *          `s_0...s_i` and `s2` is the substring `s_{i+1}...`, where `i` is
+ *          the first index of `c` and `s1` does not contain the character `c`
+ */
+function stringSplit(s: string, c: string): [string, string] {
+    if (c.length !== 1) {
+        throw new Error("Char at which to split must have length 1");
+    }
+
+    let i = 0;
+    while (i < s.length && s[i] !== c) {
+        i++;
+    }
+
+    return [s.substring(0, i), s.substring(i+1)];
+}

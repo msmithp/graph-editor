@@ -7,7 +7,7 @@ import {
     invertYAxis, radiansToDegrees, scaleCoordinates, trimPadding
 } from "./graphicsUtils";
 import { createDoubleAdjacencyGraph, getEdgeIterator } from "./graphUtils";
-import { getNBetween, hexToRgb, intercalate, squeeze } from "./utils";
+import { formatDecimal, getNBetween, hexToRgb, intercalate, squeeze } from "./utils";
 
 /** 
  * Number of digits after the decimal place to display for numbers in TikZ
@@ -110,8 +110,8 @@ function getTikzVertices(graph: Graph, settings: TikzExportSettings): string {
 
     for (let i = 0; i < graph.vertices.length; i++) {
         const v = graph.vertices[i];
-        const x = v.pos.x.toFixed(NUM_DIGITS);
-        const y = v.pos.y.toFixed(NUM_DIGITS);
+        const x = formatDecimal(v.pos.x, NUM_DIGITS);
+        const y = formatDecimal(v.pos.y, NUM_DIGITS);
         let vertexStr = "\t\t\\node[";
 
         // Only draw fill color for DOT and STANDARD styles
@@ -259,8 +259,8 @@ function getTikzEdges(graph: Graph, settings: TikzExportSettings): string {
                 const weightShift = getTikzEdgeWeightShift(graph.vertices[v1],
                     graph.vertices[v2], edgeInfo.edge, settings);
 
-                const xshift = weightShift.xshift.toFixed(NUM_DIGITS);
-                const yshift = weightShift.yshift.toFixed(NUM_DIGITS);
+                const xshift = formatDecimal(weightShift.xshift, NUM_DIGITS);
+                const yshift = formatDecimal(weightShift.yshift, NUM_DIGITS);
 
                 // For multiedges, draw the second half of edges (inclusive)
                 // on the opposite side of the edge
