@@ -1,5 +1,7 @@
 import "../../style/EditMenu.css";
 import type { Edge } from "../../types/Graph";
+import { COLOR_PICKER_DEBOUNCE } from "../../utils/constants";
+import { debounce } from "../../utils/utils";
 
 
 interface EditEdgeMenuProps {
@@ -10,16 +12,22 @@ interface EditEdgeMenuProps {
 
 function EditEdgeMenu({ edge, onChangeWeight,
     onChangeColor }: EditEdgeMenuProps) {
+
+    const debouncedChangeColor = debounce(onChangeColor, 
+        COLOR_PICKER_DEBOUNCE);
+
     return (
         <div className="editMenu">
-            <input type="color" 
+            <input type="color"
+                id="editMenuColor"
                 value={edge.color}
                 onChange={(e) => {
                     const newColor = e.currentTarget.value;
-                    onChangeColor(newColor);
+                    debouncedChangeColor(newColor);
                 }}
             />
-            <input 
+            <input
+                id="editMenuName"
                 value={edge.weight}
                 onChange={(e) => {
                     const newWeight = e.currentTarget.value;

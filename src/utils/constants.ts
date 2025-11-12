@@ -15,3 +15,6 @@ export const ARROW_HEIGHT = 15;
 // Rough width and height of characters in this font
 export const CHAR_WIDTH = 8.5;
 export const CHAR_HEIGHT = 10;
+
+// Debounce time for color pickers (ms)
+export const COLOR_PICKER_DEBOUNCE = 3;

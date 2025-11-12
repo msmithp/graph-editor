@@ -379,3 +379,23 @@ function stringSplit(s: string, c: string): [string, string] {
 
     return [s.substring(0, i), s.substring(i+1)];
 }
+
+/**
+ * Debounce a callback function; that is, prevent it from being called many
+ * times in a short period of time
+ * @param callback Callback function
+ * @param wait Time, in ms, after the debounced function has been called at
+ *             which it will be executed. New calls to the debounced function
+ *             will cancel previous calls.
+ * @returns Debounced function
+ */
+export function debounce(callback: any, wait: number) {
+    let timeoutId: number | undefined = undefined;
+
+    return (...args: any[]) => {
+        window.clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => {
+            callback(...args);
+        }, wait);
+    };
+}

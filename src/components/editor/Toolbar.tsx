@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { Mode } from "../../types/Menu";
 import { MODES } from "../../types/Menu";
+import { debounce } from "../../utils/utils";
+import { COLOR_PICKER_DEBOUNCE } from "../../utils/constants";
 
 
 interface ToolbarProps {
@@ -18,6 +20,9 @@ function Toolbar({ vertexColor, onChangeMode, onChangeColor }: ToolbarProps) {
         setSelected(selection);
         onChangeMode(selection);
     }
+
+    const debouncedChangeColor = debounce(onChangeColor, 
+        COLOR_PICKER_DEBOUNCE);
 
     // Create buttons for each possible input mode
     const radioButtons = MODES.map(opt =>
@@ -38,7 +43,7 @@ function Toolbar({ vertexColor, onChangeMode, onChangeColor }: ToolbarProps) {
             <div className="toolbarColors" style={{display: "flex", flexDirection: "column"}}>
                 <input type="color"
                     value={vertexColor}
-                    onChange={e => onChangeColor(e.currentTarget.value)}
+                    onChange={e => debouncedChangeColor(e.currentTarget.value)}
                 />
             </div>
         </div>

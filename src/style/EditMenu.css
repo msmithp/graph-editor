@@ -7,7 +7,16 @@
     display: flex;
 }
 
-.editMenu input[type=color] {
+#editMenuColor {
     height: 25px;
-    width: 25px;
+    width: 50px;
+    border-radius: 10px 1px 1px 10px;
+    border: none;
+    margin-right: 5px;
+}
+
+#editMenuName {
+    border-radius: 1px 10px 10px 1px;
+    border: none;
+    width: 100px;
 }

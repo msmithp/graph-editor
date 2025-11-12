@@ -15,3 +15,7 @@ input[type=color] {
     width: var(--icon-width);
     height: var(--icon-width);
 }
+
+input[type=text] {
+    color: green;
+}
