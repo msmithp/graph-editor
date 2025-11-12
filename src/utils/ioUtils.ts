@@ -7,7 +7,7 @@ import {
     invertYAxis, radiansToDegrees, scaleCoordinates, trimPadding
 } from "./graphicsUtils";
 import { createDoubleAdjacencyGraph, getEdgeIterator } from "./graphUtils";
-import { formatDecimal, getNBetween, hexToRgb, intercalate, squeeze } from "./utils";
+import { formatDecimal, getNBetween, hexToRgb, intercalate, clamp } from "./utils";
 
 /** 
  * Number of digits after the decimal place to display for numbers in TikZ
@@ -314,15 +314,15 @@ function getTikzEdgeBends(edges: Edge[],
         if (settings.slopedEdgeWeight) {
             // Sloped weights
             const angleDiff = base + numEdges * 9;
-            maxBend = squeeze(angleDiff, 15, 90);
+            maxBend = clamp(angleDiff, 15, 90);
         } else if (settings.edgeWeightStyle === "INSIDE") {
             // Non-sloped weights, inside edges
             const angleDiff = base + (numEdges * (perChar/2) * maxLength);
-            maxBend = squeeze(angleDiff, 15, 90);
+            maxBend = clamp(angleDiff, 15, 90);
         } else {
             // Non-sloped weights, outside edges
             const angleDiff = base + (numEdges * perChar * maxLength)
-            maxBend = squeeze(angleDiff, 15, 90);
+            maxBend = clamp(angleDiff, 15, 90);
         }
 
         return getNBetween(-maxBend, maxBend, numEdges);

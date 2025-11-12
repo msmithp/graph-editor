@@ -35,12 +35,12 @@ export function roundToBase(x: number, base: number): number {
  * * If `value` is lower than `min`, return `min`
  * * If `value` is greater than `max`, return `max`
  * * Otherwise, return `value`
- * @param value Value to be squeezed
+ * @param value Value to be clamped
  * @param min High end of range
  * @param max Low end of range
- * @returns Squeezed value
+ * @returns Clamped value
  */
-export function squeeze(value: number, min: number, max: number) {
+export function clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
 }
 
@@ -210,7 +210,7 @@ function compareNumbers(num1: number, num2: number): number {
  * @returns An array of exactly 3 integers, each between 0 and 255,
  *          representing red, green, and blue values, respectively
  */
-export function hexToRgb(hex: string): number[] {
+export function hexToRgb(hex: string): [number, number, number] {
     return [
         parseInt(hex.substring(1, 3), 16),
         parseInt(hex.substring(3, 5), 16),
@@ -225,7 +225,7 @@ export function hexToRgb(hex: string): number[] {
  *             representing red, green, and blue values, respectively
  * @returns A hex code of a color, including a leading pound sign (`#`)
  */
-export function rgbToHex(vals: number[]): string {
+export function rgbToHex(vals: [number, number, number]): string {
     let hex = "#";
 
     for (const val of vals) {

@@ -1,4 +1,4 @@
-import { isInteger, roundToBase, squeeze } from "./utils.ts";
+import { isInteger, roundToBase, clamp } from "./utils.ts";
 import type { Graph, Vertex, Edge } from "../types/Graph.ts";
 import TupleMap from "../classes/TupleMap.ts";
 
@@ -337,12 +337,12 @@ export function changeVertexLocation(graph: Graph, idx: number, x: number,
 
     if (width !== undefined) {
         // If width is defined, then ensure x is between 0 and width
-        newX = squeeze(x, 0, width);
+        newX = clamp(x, 0, width);
     }
 
     if (height !== undefined) {
         // If height is defined, then ensure y is between 0 and height
-        newY = squeeze(y, 0, height);
+        newY = clamp(y, 0, height);
     }
 
     if (gridBase !== undefined) {
